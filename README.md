@@ -16,8 +16,7 @@ This is a project that provides an easy way to take attendance in any learning e
   - accept an invitation to join a course
 
 ### ongoing plans
-- adding the REST endpoints
-- adding authentication
+- finishing the REST endpoints
 - creating a React frontend
 
 ### future features

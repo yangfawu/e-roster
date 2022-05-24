@@ -1,10 +1,10 @@
 package yangfawu.eroster.service;
 
+import com.google.common.base.Function;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import yangfawu.eroster.exception.DataConflictException;
-import yangfawu.eroster.exception.InvalidInputException;
 import yangfawu.eroster.model.Course;
 import yangfawu.eroster.model.Invitable;
 import yangfawu.eroster.model.User;
@@ -39,7 +39,7 @@ public class CourseService {
      */
     public Course createCourse(String teacherId, String courseName, String courseDescription) {
         if (!StringUtils.hasText(courseName))
-            throw new InvalidInputException("Course name is invalid.");
+            throw new IllegalArgumentException("Course name is invalid.");
 
         User teacher = userSvc.retrieveUser(teacherId);
         assert teacher != null;
@@ -63,7 +63,7 @@ public class CourseService {
      */
     public Course retrieveCourse(String id) {
         if (!StringUtils.hasText(id))
-            throw new InvalidInputException("Course ID is invalid.");
+            throw new IllegalArgumentException("Course ID is invalid.");
 
         id = StringUtils.trimWhitespace(id);
 
@@ -115,7 +115,7 @@ public class CourseService {
      */
     public void updateCourseName(String id, String newName) {
         if (!StringUtils.hasText(newName))
-            throw new InvalidInputException("New name is invalid.");
+            throw new IllegalArgumentException("New name is invalid.");
 
         newName = StringUtils.trimWhitespace(newName);
 
@@ -129,7 +129,7 @@ public class CourseService {
      */
     public void updateCourseDescription(String id, String newDescription) {
         if (!StringUtils.hasText(newDescription))
-            throw new InvalidInputException("New description is invalid.");
+            throw new IllegalArgumentException("New description is invalid.");
 
         newDescription = StringUtils.trimWhitespace(newDescription);
 
@@ -174,8 +174,8 @@ public class CourseService {
     private void createEntry(
             String userId,
             String courseId,
-            Lambda<Invitable, HashSet<String>> first,
-            Lambda<Invitable, HashSet<String>> second) {
+            Function<Invitable, HashSet<String>> first,
+            Function<Invitable, HashSet<String>> second) {
         User user = userSvc.retrieveUser(userId);
         Course course = retrieveCourse(courseId);
         assert user != null && course != null;
@@ -190,13 +190,13 @@ public class CourseService {
         if (course.getStudents().contains(userId))
             throw new DataConflictException("User is already a student of the course.");
 
-        if (first.exec(user).contains(courseId) || first.exec(course).contains(userId)) {
+        if (first.apply(user).contains(courseId) || first.apply(course).contains(userId)) {
             addStudent(userId, courseId);
             return;
         }
 
-        second.exec(user).add(courseId);
-        second.exec(course).add(userId);
+        second.apply(user).add(courseId);
+        second.apply(course).add(userId);
         userRepo.save(user);
         courseRepo.save(course);
     }

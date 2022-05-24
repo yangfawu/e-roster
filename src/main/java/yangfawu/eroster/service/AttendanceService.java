@@ -4,7 +4,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import yangfawu.eroster.exception.DataConflictException;
-import yangfawu.eroster.exception.InvalidInputException;
 import yangfawu.eroster.model.Attendance;
 import yangfawu.eroster.model.Course;
 import yangfawu.eroster.repository.AttendanceRepository;
@@ -64,7 +63,7 @@ public class AttendanceService {
      */
     public Attendance retrieveAttendance(String id) {
         if (!StringUtils.hasText(id))
-            throw new InvalidInputException("Attendance ID is invalid.");
+            throw new IllegalArgumentException("Attendance ID is invalid.");
 
         id = StringUtils.trimWhitespace(id);
 
@@ -93,7 +92,7 @@ public class AttendanceService {
 
     public void updateTimeCreatedFor(String id, LocalDateTime newTimeCreatedFor) {
         if (newTimeCreatedFor == null)
-            throw new InvalidInputException("New time is invalid");
+            throw new IllegalArgumentException("New time is invalid");
 
         Attendance doc = retrieveAttendance(id);
         assert doc != null;
@@ -114,9 +113,9 @@ public class AttendanceService {
      */
     public void updateStudentStatus(String attendanceId, String studentId, String newStatus) {
         if (!StringUtils.hasText(studentId))
-            throw new InvalidInputException("User ID is invalid.");
+            throw new IllegalArgumentException("User ID is invalid.");
         if (!StringUtils.hasText(newStatus))
-            throw new InvalidInputException("Status is invalid.");
+            throw new IllegalArgumentException("Status is invalid.");
 
         Attendance doc = retrieveAttendance(attendanceId);
         assert doc != null;
