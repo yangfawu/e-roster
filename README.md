@@ -17,7 +17,7 @@ This is a project that provides an easy way to take attendance in any learning e
 
 ### ongoing plans
 - finishing the REST endpoints
-- creating a React frontend
+- working on React frontend
 
 ### future features
 - ability for students to visit an attendance poll via a link

@@ -22,7 +22,7 @@ public class ERosterApplication {
 
 			@Override
 			public void run(String... args) {
-
+				log.info("React hooked in!");
  			}
 
 		};

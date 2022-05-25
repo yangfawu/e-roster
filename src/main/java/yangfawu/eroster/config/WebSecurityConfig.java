@@ -41,8 +41,7 @@ public class WebSecurityConfig {
 
 
     @Autowired
-    public WebSecurityConfig(
-            TokenAuthenticationProvider tokenAuthProvider) {
+    public WebSecurityConfig(TokenAuthenticationProvider tokenAuthProvider) {
         this.tokenAuthProvider = tokenAuthProvider;
     }
 
@@ -93,7 +92,7 @@ public class WebSecurityConfig {
     @Bean
     public AuthenticationFailureHandler authFailureHandler() {
         return (request, response, exception) -> {
-            log.info("{} :: {}", request.getRequestURL(), exception.getMessage());
+            log.error("{} :: {}", request.getRequestURL(), exception.getMessage());
             response.sendError(HttpServletResponse.SC_UNAUTHORIZED, exception.getMessage());
         };
     }

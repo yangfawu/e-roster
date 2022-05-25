@@ -1,0 +1,7 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="Spring React DEV [make sure include-webapp=false]" type="CompoundRunConfigurationType">
+    <toRun name="start" type="js.build_tools.npm" />
+    <toRun name="ERosterApplication" type="SpringBootApplicationConfigurationType" />
+    <method v="2" />
+  </configuration>
+</component>
