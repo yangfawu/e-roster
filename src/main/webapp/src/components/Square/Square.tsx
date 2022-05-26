@@ -1,9 +1,10 @@
 import React, {Component, MouseEventHandler} from 'react';
 import styles from './Square.module.scss';
 
+export type SquareValue = 'X' | 'O' | null;
 interface SquareProps {
-    value: string | null,
-    onClick: MouseEventHandler
+    value: SquareValue,
+    onClick?: MouseEventHandler
 }
 
 interface SquareState {}
