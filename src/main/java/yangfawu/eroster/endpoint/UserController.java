@@ -21,12 +21,22 @@ public class UserController {
         this.userSvc = userSvc;
     }
 
+    /**
+     * Retrieves the user info of the client.
+     * @return the user account
+     */
     @GetMapping("")
     public User getSelf(UsernamePasswordAuthenticationToken user) {
         UserCredential cred = (UserCredential) user.getPrincipal();
         return userSvc.retrieveUser(cred.getId());
     }
 
+    /**
+     * Retrieves the user info associated with the given id.
+     * NOTE: if requested user is not themselves, some data will be removed
+     * @param id the id of the user
+     * @return the requested user info
+     */
     @GetMapping("/{id}")
     public User getUser(@PathVariable String id, UsernamePasswordAuthenticationToken user) {
         User fetchedUser = userSvc.retrieveUser(id);

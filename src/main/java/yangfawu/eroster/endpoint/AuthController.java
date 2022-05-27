@@ -24,6 +24,11 @@ public class AuthController {
         this.userSvc = userSvc;
     }
 
+    /**
+     * Client sends user credentials to create an account.
+     * @param request the credentials
+     * @return the token of the created account
+     */
     @PostMapping("/register")
     public String register(@RequestBody Credential request) {
         String userId = userSvc.createUser(
@@ -36,6 +41,11 @@ public class AuthController {
                 .orElseThrow(() -> new DataConflictException("Invalid username and/or password."));
     }
 
+    /**
+     * Client sends in user info to login.
+     * @param request the email and password of client
+     * @return the token associated with account
+     */
     @PostMapping("/login")
     public String login(@RequestBody Credential request) {
         return tokenAuthSvc.login(request.getEmail(), request.getPassword())

@@ -16,9 +16,9 @@ import java.util.HashSet;
 @Service
 public class CourseService {
 
-    public final CourseRepository courseRepo;
-    public final UserRepository userRepo;
-    public final UserService userSvc;
+    private final CourseRepository courseRepo;
+    private final UserRepository userRepo;
+    private final UserService userSvc;
 
     @Autowired
     public CourseService(
