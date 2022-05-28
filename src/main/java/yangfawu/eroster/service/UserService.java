@@ -5,11 +5,11 @@ import org.apache.commons.validator.routines.EmailValidator;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
-import yangfawu.eroster.exception.DataConflictException;
 import yangfawu.eroster.model.User;
 import yangfawu.eroster.model.UserCredential;
 import yangfawu.eroster.repository.UserCredentialRepository;
 import yangfawu.eroster.repository.UserRepository;
+import yangfawu.eroster.util.ServiceUtil;
 
 @Service
 @Log4j2
@@ -33,59 +33,42 @@ public class UserService {
      * @return the created user
      */
     public User createUser(String name, String email, String password) {
-        if (!StringUtils.hasText(name))
-            throw new IllegalArgumentException("Name is invalid.");
-        if (!EmailValidator.getInstance().isValid(email))
-            throw new IllegalArgumentException("Email is invalid.");
-        if (password == null)
-            throw new IllegalArgumentException("Password is invalid.");
+        final String EMAIL = StringUtils.trimWhitespace(email);
+        if (email == null ||
+            EmailValidator.getInstance().isValid(EMAIL) ||
+            password == null ||
+            userRepo.existsUserByEmail(EMAIL))
+            return null;
 
-        name = StringUtils.trimWhitespace(name);
-        email = StringUtils.trimWhitespace(email);
+        final String USER_ID = userRepo.insert(new User(
+            ServiceUtil.cleanOrDefault(name, "Anonymous"),
+            email
+        )).getId();
+        userCredRepo.save(new UserCredential(USER_ID, EMAIL, password));
 
-        if (userRepo.existsUserByEmail(email))
-            throw new DataConflictException("Email is already used by another user.");
-
-        String id = userRepo.insert(new User(name, email)).getId();
-        userCredRepo.save(new UserCredential(id, email, password));
-
-        return userRepo.getUserById(id);
+        return userRepo.getUserById(USER_ID);
     }
 
     /**
-     * Retrieves user by id. (Will throw if user not found)
+     * Retrieves user by ID.
      * @param id the id of the user
-     * @return the user if found
+     * @return the user
      */
     public User retrieveUser(String id) {
-        if (!StringUtils.hasText(id))
-            throw new IllegalArgumentException("User ID is invalid");
-
-        id = StringUtils.trimWhitespace(id);
-
-        User user = userRepo.getUserById(id);
-        if (user == null)
-            throw new DataConflictException("User does not exist.");
-
-        return user;
+        if (id == null)
+            return null;
+        return userRepo.getUserById(StringUtils.trimWhitespace(id));
     }
 
     /**
-     * Retrieves user credential by id. (Will throw if user not found)
+     * Retrieves user credential by id.
      * @param id the id of the user
-     * @return the user credential if found
+     * @return the user credential
      */
     public UserCredential retrieveUserCred(String id) {
-        if (!StringUtils.hasText(id))
-            throw new IllegalArgumentException("User ID is invalid");
-
-        id = StringUtils.trimWhitespace(id);
-
-        UserCredential cred = userCredRepo.getUserCredentialById(id);
-        if (cred == null)
-            throw new DataConflictException("User credential does not exist.");
-
-        return cred;
+        if (id == null)
+            return null;
+        return userCredRepo.getUserCredentialById(StringUtils.trimWhitespace(id));
     }
 
     /**
@@ -94,37 +77,46 @@ public class UserService {
      * @param password the password of the user
      * @return the user credential linked to the user
      */
-    public UserCredential retrieveUserCredential(String username, String password) {
-        if (!StringUtils.hasText(username))
-            throw new IllegalArgumentException("Username is invalid.");
-        if (password == null)
-            throw new IllegalArgumentException("Password is invalid.");
-
-        username = StringUtils.trimWhitespace(username);
-
-        UserCredential userCred = userCredRepo.getUserCredentialByUsernameAndPassword(username, password);
-        if (userCred == null)
-            throw new DataConflictException("User credentials not found.");
-
-        return userCred;
+    public UserCredential retrieveUserCredByLogin(String username, String password) {
+        if (username == null || password == null)
+            return null;
+        return userCredRepo.getUserCredentialByUsernameAndPassword(
+            StringUtils.trimWhitespace(username),
+            password
+        );
     }
 
     /**
      * Attempts to update user's name by id.
      * @param id the id of the user
      * @param newName the new name to be applied
+     * @return whether operation was done or not
      */
-    public void updateUserName(String id, String newName) {
+    public boolean updateUserName(String id, String newName) {
         if (!StringUtils.hasText(newName))
-            throw new IllegalArgumentException("New name is invalid.");
+            return false;
 
         User user = retrieveUser(id);
-        assert user != null;
+        if (user == null)
+            return false;
 
-        newName = StringUtils.trimWhitespace(newName);
-
-        user.setName(newName);
+        user.setName(StringUtils.trimWhitespace(newName));
         userRepo.save(user);
+        return true;
+    }
+
+    protected boolean updateUser(User user) {
+        if (user == null)
+            return false;
+        userRepo.save(user);
+        return true;
+    }
+
+    protected boolean updateUserCred(UserCredential cred) {
+        if (cred == null)
+            return false;
+        userCredRepo.save(cred);
+        return true;
     }
 
 }

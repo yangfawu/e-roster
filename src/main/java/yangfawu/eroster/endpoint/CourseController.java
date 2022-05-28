@@ -129,7 +129,7 @@ public class CourseController {
      * @param userId the ID of the user
      * @param courseId the ID of the course
      */
-    @PostMapping("/cancelEntry/{userId}/to/{courseId}")
+    @PostMapping("/cancel/{userId}/to/{courseId}")
     public void cancelEntry(
             @PathVariable String userId,
             @PathVariable String courseId,

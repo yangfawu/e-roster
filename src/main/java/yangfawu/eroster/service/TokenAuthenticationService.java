@@ -27,15 +27,10 @@ public class TokenAuthenticationService {
                     String id = String.valueOf(attributes.get("id"));
                     String username = String.valueOf(attributes.get("username"));
 
-                    UserCredential cred;
-                    try {
-                        cred = userSvc.retrieveUserCred(id);
-                    } catch (Exception e) {
+                    UserCredential cred = userSvc.retrieveUserCred(id);
+                    if (cred == null || !cred.getUsername().equals(username))
                         return null;
-                    }
-
-                    assert cred != null;
-                    return cred.getUsername().equals(username) ? cred : null;
+                    return cred;
                 });
     }
 
@@ -46,19 +41,13 @@ public class TokenAuthenticationService {
      * @return optional token depending on validness of inputs
      */
     public Optional<String> login(String username, String password) {
-        UserCredential cred;
-        try {
-            cred = userSvc.retrieveUserCredential(username, password);
-        } catch (Exception e) {
+        UserCredential cred = userSvc.retrieveUserCredByLogin(username, password);
+        if (cred == null)
             return Optional.empty();
-        }
-
-        assert cred != null;
 
         ImmutableMap.Builder<String, Object> builder = ImmutableMap.builder();
         builder.put("username", cred.getUsername());
         builder.put("id", cred.getId());
-
         return Optional.of(jwtTokenSvc.createNewToken(builder.build()));
     }
 

@@ -4,7 +4,9 @@ import lombok.Data;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 
+import java.time.Instant;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.HashMap;
 
 @Document(collection = "attendances")
@@ -39,4 +41,11 @@ public class Attendance {
         this();
         this.courseId = courseId;
     }
+
+    public void setMsTimeCreatedFor(long msTimeCreatedFor) {
+        this.timeCreatedFor = Instant.ofEpochMilli(msTimeCreatedFor)
+                .atZone(ZoneId.systemDefault())
+                .toLocalDateTime();
+    }
+
 }

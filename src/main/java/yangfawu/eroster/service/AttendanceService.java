@@ -3,11 +3,9 @@ package yangfawu.eroster.service;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
-import yangfawu.eroster.exception.DataConflictException;
 import yangfawu.eroster.model.Attendance;
 import yangfawu.eroster.model.Course;
 import yangfawu.eroster.repository.AttendanceRepository;
-import yangfawu.eroster.repository.CourseRepository;
 
 import java.time.LocalDateTime;
 import java.util.HashMap;
@@ -17,43 +15,38 @@ public class AttendanceService {
 
     private final AttendanceRepository attendanceRepo;
     private final CourseService courseSvc;
-    private final CourseRepository courseRepo;
 
     @Autowired
     public AttendanceService(
             AttendanceRepository attendanceRepo,
-            CourseService courseSvc, CourseRepository courseRepo) {
+            CourseService courseSvc) {
         this.attendanceRepo = attendanceRepo;
         this.courseSvc = courseSvc;
-        this.courseRepo = courseRepo;
     }
 
     /**
      * Creates a new attendance record for the course
      * @param courseId the id of the course
-     * @param timeCreatedFor the time the record is made for
+     * @param msTimeCreatedFor the time the record is made for
      * @return the newly created attendance
      */
-    public Attendance createAttendance(String courseId, LocalDateTime timeCreatedFor) {
+    public Attendance createAttendance(String courseId, long msTimeCreatedFor) {
         Course course = courseSvc.retrieveCourse(courseId);
-        assert course != null;
+        if (course == null || course.isArchived())
+            return null;
 
-        if (course.isArchived())
-            throw new DataConflictException("Cannot create attendance record for archived course.");
-
-        Attendance doc = new Attendance(courseId);
-        if (timeCreatedFor != null)
-            doc.setTimeCreatedFor(timeCreatedFor);
+        Attendance doc = new Attendance(course.getId());
+        doc.setMsTimeCreatedFor(msTimeCreatedFor);
 
         HashMap<String, Attendance.Status> tracker = doc.getMarks();
         for (String studentId : course.getStudents())
             tracker.put(studentId, Attendance.Status.N_A);
 
-        String docId = attendanceRepo.save(doc).getId();
-        course.getAttendances().add(docId);
-        courseRepo.save(course);
+        final String DOC_ID = attendanceRepo.save(doc).getId();
+        course.getAttendances().add(DOC_ID);
+        courseSvc.updateCourse(course);
 
-        return attendanceRepo.getAttendanceById(docId);
+        return attendanceRepo.getAttendanceById(DOC_ID);
     }
 
     /**
@@ -62,47 +55,49 @@ public class AttendanceService {
      * @return the retrieved attendance
      */
     public Attendance retrieveAttendance(String id) {
-        if (!StringUtils.hasText(id))
-            throw new IllegalArgumentException("Attendance ID is invalid.");
+        if (id == null)
+            return null;
+        return attendanceRepo.getAttendanceById(StringUtils.trimWhitespace(id));
+    }
 
-        id = StringUtils.trimWhitespace(id);
-
-        Attendance doc = attendanceRepo.getAttendanceById(id);
-        if (doc == null)
-            throw new DataConflictException("Attendance record does not exist.");
-
+    private Attendance retrieveAttendanceIfNotArchived(String id) {
+        Attendance doc = retrieveAttendance(id);
+        if (doc == null || doc.isArchived())
+            return null;
         return doc;
     }
 
     /**
      * Archive an attendance by id
      * @param id the id of the attendance
+     * @returns whether the operation was done or not
      */
-    public void archiveAttendance(String id) {
-        Attendance doc = retrieveAttendance(id);
-        assert doc != null;
-
-        if (doc.isArchived())
-            throw new DataConflictException("Attendance is already archived.");
+    public boolean archiveAttendance(String id) {
+        Attendance doc = retrieveAttendanceIfNotArchived(id);
+        if (doc == null)
+            return false;
 
         doc.setArchived(true);
         doc.setLastUpdated(LocalDateTime.now());
         attendanceRepo.save(doc);
+        return true;
     }
 
-    public void updateTimeCreatedFor(String id, LocalDateTime newTimeCreatedFor) {
-        if (newTimeCreatedFor == null)
-            throw new IllegalArgumentException("New time is invalid");
+    /**
+     * Updates the time the record was created to keep track of.
+     * @param id id of the attendance
+     * @param newMsTimeCreatedFor new created time
+     * @return whether the operation was done or not
+     */
+    public boolean updateTimeCreatedFor(String id, long newMsTimeCreatedFor) {
+        Attendance doc = retrieveAttendanceIfNotArchived(id);
+        if (doc == null)
+            return false;
 
-        Attendance doc = retrieveAttendance(id);
-        assert doc != null;
-
-        if (doc.isArchived())
-            throw new DataConflictException("Cannot modify archived attendance.");
-
-        doc.setTimeCreated(newTimeCreatedFor);
+        doc.setMsTimeCreatedFor(newMsTimeCreatedFor);
         doc.setLastUpdated(LocalDateTime.now());
         attendanceRepo.save(doc);
+        return true;
     }
 
     /**
@@ -111,32 +106,26 @@ public class AttendanceService {
      * @param studentId the id of the student
      * @param newStatus the new status of the student
      */
-    public void updateStudentStatus(String attendanceId, String studentId, String newStatus) {
-        if (!StringUtils.hasText(studentId))
-            throw new IllegalArgumentException("User ID is invalid.");
-        if (!StringUtils.hasText(newStatus))
-            throw new IllegalArgumentException("Status is invalid.");
-
-        Attendance doc = retrieveAttendance(attendanceId);
-        assert doc != null;
-
-        if (doc.isArchived())
-            throw new DataConflictException("Cannot modify archived attendance.");
+    public boolean updateStudentStatus(String attendanceId, String studentId, String newStatus) {
+        Attendance doc = retrieveAttendanceIfNotArchived(attendanceId);
+        if (doc == null)
+            return false;
 
         Attendance.Status status;
         try {
             status = Attendance.Status.valueOf(newStatus);
         } catch (IllegalArgumentException e) {
-            throw new DataConflictException("Status is not recognized");
+            return false;
         }
 
-        studentId = StringUtils.trimWhitespace(studentId);
-        if (!doc.getMarks().containsKey(studentId))
-            throw new DataConflictException("User is not a student on the attendance.");
+        final String STUDENT_ID = StringUtils.trimWhitespace(studentId);
+        if (!doc.getMarks().containsKey(STUDENT_ID))
+            return false;
 
-        doc.getMarks().put(studentId, status);
+        doc.getMarks().put(STUDENT_ID, status);
         doc.setLastUpdated(LocalDateTime.now());
         attendanceRepo.save(doc);
+        return true;
     }
 
 }

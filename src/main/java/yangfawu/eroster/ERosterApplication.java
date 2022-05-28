@@ -6,6 +6,7 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Bean;
 import org.springframework.data.mongodb.repository.config.EnableMongoRepositories;
+import yangfawu.eroster.service.UserService;
 
 @SpringBootApplication
 @EnableMongoRepositories
@@ -17,13 +18,20 @@ public class ERosterApplication {
 	}
 
 	@Bean
-	public CommandLineRunner runner() {
+	public CommandLineRunner runner(UserService userSvc) {
 		return new CommandLineRunner() {
-
 			@Override
-			public void run(String... args) {
-				log.info("React hooked in!");
- 			}
+			public void run(String... args) throws Exception {
+//				long milliseconds = 1486815313230L;
+//				LocalDateTime cvDate = Instant.ofEpochMilli(milliseconds).atZone(ZoneId.systemDefault()).toLocalDateTime();
+
+//				log.info("hasText={}", StringUtils.hasText(null));
+				testUserService();
+			}
+
+			public void testUserService(){
+				log.info("UserService={}", userSvc);
+			}
 
 		};
 	}
