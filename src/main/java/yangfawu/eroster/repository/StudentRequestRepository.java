@@ -2,8 +2,8 @@ package yangfawu.eroster.repository;
 
 import org.springframework.data.mongodb.repository.MongoRepository;
 import org.springframework.stereotype.Repository;
-import yangfawu.eroster.model.Attendance;
+import yangfawu.eroster.model.StudentRequest;
 
 @Repository
-public interface AttendanceRepository extends MongoRepository<Attendance, String> {
+public interface StudentRequestRepository extends MongoRepository<StudentRequest, String> {
 }

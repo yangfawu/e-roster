@@ -1,10 +1,13 @@
+import {ReactNode} from "react";
+import {Route} from "react-router-dom";
+
 export const range = (length: number) => Array.from({length}, (_, i) => i);
 
 export const rangeBounds = (a: number, b: number) => range(b - a).map(v => v + a);
 
-export const forJSX = (
-    iter: number[],
-    func: (v: number, i: number) => any
+export const forJSX = <T,S>(
+    iter: T[],
+    func: (val: T, idx: number) => S
 ) => iter.map((a, b) => func(a, b));
 
 class ListNode<T> {
@@ -98,3 +101,9 @@ export class HistoryStack<T> {
     }
 
 }
+
+export const ManyToOneRoute = (
+    paths: string[],
+    element: ReactNode,
+    children?: ReactNode
+) => forJSX(paths, path => <Route key={path} path={path} element={element}>{children}</Route>);

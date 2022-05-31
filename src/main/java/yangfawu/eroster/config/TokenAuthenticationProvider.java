@@ -1,26 +1,28 @@
 package yangfawu.eroster.config;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.authentication.dao.AbstractUserDetailsAuthenticationProvider;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Component;
-import yangfawu.eroster.service.TokenAuthenticationService;
+import yangfawu.eroster.exception.TokenException;
+import yangfawu.eroster.service.JWTTokenService;
+import yangfawu.eroster.service.UserService;
 
 import java.util.Optional;
 
 @Component
 public class TokenAuthenticationProvider extends AbstractUserDetailsAuthenticationProvider {
 
-    private final TokenAuthenticationService tokenAuthSvc;
+    private final JWTTokenService jwtTokenSvc;
+    private final UserService userSvc;
 
-    @Autowired
-    public TokenAuthenticationProvider(TokenAuthenticationService tokenAuthSvc) {
-        this.tokenAuthSvc = tokenAuthSvc;
+    public TokenAuthenticationProvider(
+            JWTTokenService jwtTokenSvc,
+            UserService userSvc) {
+        this.jwtTokenSvc = jwtTokenSvc;
+        this.userSvc = userSvc;
     }
-
 
     @Override
     protected void additionalAuthenticationChecks(
@@ -33,10 +35,11 @@ public class TokenAuthenticationProvider extends AbstractUserDetailsAuthenticati
     protected UserDetails retrieveUser(
             String username,
             UsernamePasswordAuthenticationToken authentication) throws AuthenticationException {
-        Object token = authentication.getCredentials();
-        return Optional.ofNullable(token)
-                    .map(String::valueOf)
-                    .flatMap(tokenAuthSvc::findUserCredentialByToken)
-                    .orElseThrow(() -> new UsernameNotFoundException("No user found with token " + token + "."));
+        Object tokenObject = authentication.getCredentials();
+        return Optional.ofNullable(tokenObject)
+                        .map(String::valueOf)
+                        .map(jwtTokenSvc::verifyToken)
+                        .map(userSvc::getPrivateUser)
+                        .orElseThrow(() -> new TokenException("Can't find token " + tokenObject + "."));
     }
 }

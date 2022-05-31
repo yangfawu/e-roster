@@ -1,122 +1,83 @@
 package yangfawu.eroster.service;
 
-import lombok.extern.log4j.Log4j2;
 import org.apache.commons.validator.routines.EmailValidator;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
-import yangfawu.eroster.model.User;
-import yangfawu.eroster.model.UserCredential;
-import yangfawu.eroster.repository.UserCredentialRepository;
-import yangfawu.eroster.repository.UserRepository;
-import yangfawu.eroster.util.ServiceUtil;
+import yangfawu.eroster.exception.InputValidationException;
+import yangfawu.eroster.model.PrivateUser;
+import yangfawu.eroster.model.PublicUser;
+import yangfawu.eroster.repository.PrivateUserRepository;
+import yangfawu.eroster.repository.PublicUserRepository;
+import yangfawu.eroster.util.UiAvatar;
 
 @Service
-@Log4j2
 public class UserService {
 
-    private final UserRepository userRepo;
-    private final UserCredentialRepository userCredRepo;
+    private final PublicUserRepository pubUserRepo;
+    private final PrivateUserRepository priUserRepo;
 
     @Autowired
     public UserService(
-            UserRepository userRepo,
-            UserCredentialRepository userCredRepo) {
-        this.userRepo = userRepo;
-        this.userCredRepo = userCredRepo;
+            PublicUserRepository pubUserRepo,
+            PrivateUserRepository priUserRepo) {
+        this.pubUserRepo = pubUserRepo;
+        this.priUserRepo = priUserRepo;
     }
 
-    /**
-     * Attempts to create a new user.
-     * @param name name of new user
-     * @param email email of new user
-     * @return the created user
-     */
-    public User createUser(String name, String email, String password) {
-        final String EMAIL = StringUtils.trimWhitespace(email);
-        if (email == null ||
-            EmailValidator.getInstance().isValid(EMAIL) ||
-            password == null ||
-            userRepo.existsUserByEmail(EMAIL))
-            return null;
-
-        final String USER_ID = userRepo.insert(new User(
-            ServiceUtil.cleanOrDefault(name, "Anonymous"),
-            email
-        )).getId();
-        userCredRepo.save(new UserCredential(USER_ID, EMAIL, password));
-
-        return userRepo.getUserById(USER_ID);
+    public boolean userExistsById(String id) {
+        return pubUserRepo.existsById(id);
     }
 
-    /**
-     * Retrieves user by ID.
-     * @param id the id of the user
-     * @return the user
-     */
-    public User retrieveUser(String id) {
-        if (id == null)
-            return null;
-        return userRepo.getUserById(StringUtils.trimWhitespace(id));
+    public PublicUser getPublicUser(String id) {
+        return pubUserRepo.findById(id).orElseThrow();
     }
 
-    /**
-     * Retrieves user credential by id.
-     * @param id the id of the user
-     * @return the user credential
-     */
-    public UserCredential retrieveUserCred(String id) {
-        if (id == null)
-            return null;
-        return userCredRepo.getUserCredentialById(StringUtils.trimWhitespace(id));
+    public PrivateUser getPrivateUser(String email, String password) {
+        return priUserRepo.findByEmailAndPassword(email, password).orElseThrow();
     }
 
-    /**
-     * Retrieves user credentials by username and password
-     * @param username the username of the user [the email]
-     * @param password the password of the user
-     * @return the user credential linked to the user
-     */
-    public UserCredential retrieveUserCredByLogin(String username, String password) {
-        if (username == null || password == null)
-            return null;
-        return userCredRepo.getUserCredentialByUsernameAndPassword(
-            StringUtils.trimWhitespace(username),
-            password
-        );
+    public PrivateUser getPrivateUser(String userId) {
+        return priUserRepo.findByPublicId(userId).orElseThrow();
     }
 
-    /**
-     * Attempts to update user's name by id.
-     * @param id the id of the user
-     * @param newName the new name to be applied
-     * @return whether operation was done or not
-     */
-    public boolean updateUserName(String id, String newName) {
-        if (!StringUtils.hasText(newName))
-            return false;
+    public PrivateUser createUser(String name, String school, String role, String email, String password) {
+        // prettify input data
+        name = StringUtils.trimWhitespace(name);
+        school = StringUtils.trimWhitespace(school);
+        role = StringUtils.trimWhitespace(role);
+        email = StringUtils.trimWhitespace(email);
 
-        User user = retrieveUser(id);
-        if (user == null)
-            return false;
+        // validate the data
+        if (name.length() < 3)
+            throw new InputValidationException("Name must be at least 3 characters.");
+        if (!StringUtils.hasText(school))
+            throw new InputValidationException("School name not provided.");
+        if (!EmailValidator.getInstance().isValid(email))
+            throw new InputValidationException("Invalid email provided.");
+        if (priUserRepo.existsByEmail(email))
+            throw new InputValidationException("Email already taken.");
+        PublicUser.Role userRole;
+        try {
+            userRole = PublicUser.Role.valueOf(role);
+        } catch (IllegalArgumentException e) {
+            throw new InputValidationException("Invalid school role provided.");
+        }
 
-        user.setName(StringUtils.trimWhitespace(newName));
-        userRepo.save(user);
-        return true;
-    }
+        // create user without any credentials
+        PublicUser user = new PublicUser(name,school, userRole);
+        user.setAvatarUrl(UiAvatar.create(name));
+        user = pubUserRepo.save(user);
 
-    protected boolean updateUser(User user) {
-        if (user == null)
-            return false;
-        userRepo.save(user);
-        return true;
-    }
+        // create user credentials
+        PrivateUser cred = new PrivateUser(user.getId(), email, password);
+        cred = priUserRepo.save(cred);
 
-    protected boolean updateUserCred(UserCredential cred) {
-        if (cred == null)
-            return false;
-        userCredRepo.save(cred);
-        return true;
+        // hook credentials ID to public
+        user.setPrivateUserId(cred.getId());
+        pubUserRepo.save(user);
+
+        return cred;
     }
 
 }

@@ -15,12 +15,27 @@
         "style": "src/templates/component/TemplateName.module.scss"
       }
     },
+    "functional": {
+      "path": "src/components",
+      "withStyle": true,
+      "withTest": false,
+      "withStory": false,
+      "withLazy": false,
+      "customTemplates": {
+        "component": "src/templates/functional/TemplateName.tsx",
+        "style": "src/templates/component/TemplateName.module.scss"
+      }
+    },
     "page": {
       "path": "src/pages",
       "withStyle": true,
       "withTest": false,
       "withStory": false,
-      "withLazy": false
+      "withLazy": false,
+      "customTemplates": {
+        "component": "src/templates/functional/TemplateName.tsx",
+        "style": "src/templates/component/TemplateName.module.scss"
+      }
     }
   }
 }

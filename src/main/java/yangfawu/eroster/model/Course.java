@@ -4,37 +4,29 @@ import lombok.Data;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 
-import java.util.HashSet;
+import java.time.Instant;
+import java.util.LinkedHashSet;
 
 @Document(collection = "courses")
 @Data
-public class Course implements Invitable {
+public class Course {
 
     @Id
     private String id;
 
-    private String teacher, name, description;
-    private HashSet<String> students, invites, requests, attendances;
+    private String teacherId, name, description;
+
+    private Instant created;
     private boolean archived;
 
-    public Course() {
-        super();
-        this.students = new HashSet<>();
-        this.invites = new HashSet<>();
-        this.requests = new HashSet<>();
-        this.attendances = new HashSet<>();
-        this.archived = false;
-    }
+    private LinkedHashSet<String> studentIds;
 
-    public Course(String teacher, String name, String description) {
-        this();
-        this.teacher = teacher;
+    public Course(String teacherId, String name, String description) {
+        this.teacherId = teacherId;
         this.name = name;
         this.description = description;
+        this.archived = false;
+        this.created = Instant.now();
+        this.studentIds = new LinkedHashSet<>();
     }
-
-    public Course(String name) {
-        this("NO_TEACHER_ID", name, "NO_DESCRIPTION");
-    }
-
 }
