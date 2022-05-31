@@ -1,8 +1,10 @@
 import React, {Component} from 'react';
 
-interface TemplateNameProps {}
+interface TemplateNameProps {
+}
 
-interface TemplateNameState {}
+interface TemplateNameState {
+}
 
 class TemplateName extends Component<TemplateNameProps, TemplateNameState> {
     render() {

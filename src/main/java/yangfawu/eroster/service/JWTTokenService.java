@@ -1,12 +1,10 @@
 package yangfawu.eroster.service;
 
-import io.jsonwebtoken.Clock;
-import io.jsonwebtoken.CompressionCodec;
-import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.SignatureAlgorithm;
+import io.jsonwebtoken.*;
 import io.jsonwebtoken.impl.compression.GzipCompressionCodec;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import yangfawu.eroster.model.PrivateUser;
 
 import java.time.Instant;
 import java.util.Date;
@@ -25,25 +23,25 @@ public class JWTTokenService implements Clock {
     @Value("${app.jwt-token-service.refresh-expiration-ms}")
     private long tokenDuration;
 
-    public String createNewToken(String userId) {
+    public String createNewToken(PrivateUser cred) {
         return Jwts.builder()
-                    .setIssuer(issuer)
-                    .setIssuedAt(now())
-                    .setExpiration(Date.from(Instant.now().plusMillis(tokenDuration)))
-                    .setId(userId)
-                    .signWith(SignatureAlgorithm.HS256, secret)
-                    .compressWith(CODEC)
-                    .compact();
+                .setIssuer(issuer)
+                .setIssuedAt(now())
+                .setExpiration(Date.from(Instant.now().plusMillis(tokenDuration)))
+                .setId(cred.getPublicId())
+                .setSubject(cred.getPassword())
+                .signWith(SignatureAlgorithm.HS256, secret)
+                .compressWith(CODEC)
+                .compact();
     }
 
-    public String verifyToken(String token) {
+    public Claims verifyToken(String token) {
         return Jwts.parser()
-                    .requireIssuer(issuer)
-                    .setSigningKey(secret)
-                    .setClock(this)
-                    .parseClaimsJws(token)
-                    .getBody()
-                    .getId();
+                .requireIssuer(issuer)
+                .setSigningKey(secret)
+                .setClock(this)
+                .parseClaimsJws(token)
+                .getBody();
     }
 
     @Override

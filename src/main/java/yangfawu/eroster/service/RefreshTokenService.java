@@ -8,15 +8,14 @@ import yangfawu.eroster.model.RefreshToken;
 import yangfawu.eroster.repository.RefreshTokenRepository;
 
 import java.time.Instant;
-import java.util.UUID;
 
 @Service
 public class RefreshTokenService {
 
-    @Value("${app.jwt-token-service.refresh-expiration-ms}")
-    private long tokenDuration;
     private final UserService userSvc;
     private final RefreshTokenRepository refTokenRepo;
+    @Value("${app.jwt-token-service.refresh-expiration-ms}")
+    private long tokenDuration;
 
     @Autowired
     public RefreshTokenService(
@@ -31,24 +30,31 @@ public class RefreshTokenService {
             throw new TokenException("Couldn't find user.");
         refTokenRepo.deleteByUserId(userId);
         return refTokenRepo.save(
-            new RefreshToken(
-                userId,
-                UUID.randomUUID().toString(),
-                Instant.now().plusMillis(tokenDuration)
-            )
+                new RefreshToken(
+                        userId,
+                        Instant.now().plusMillis(tokenDuration)
+                )
         ).getToken();
     }
 
-    public RefreshToken verifyToken(RefreshToken token) {
-        if (token.getExpiration().compareTo(Instant.now()) < 0) {
-            refTokenRepo.deleteById(token.getId());
+    public RefreshToken verifyToken(RefreshToken refToken) {
+        if (refToken.getExpiration().compareTo(Instant.now()) < 0) {
+            deleteToken(refToken.getToken());
             throw new TokenException("Refresh token has expired. Please sign in again for new token.");
         }
-        return token;
+        return refToken;
     }
 
     public RefreshToken findByToken(String token) {
-        return refTokenRepo.findByToken(token).orElseThrow();
+        return refTokenRepo.findByToken(token).orElseThrow(() -> new TokenException("Cannot find token."));
+    }
+
+    public RefreshToken findByUserId(String userId) {
+        return refTokenRepo.findByUserId(userId).orElseThrow(() -> new TokenException("Cannot find token for user."));
+    }
+
+    public long deleteToken(String token) {
+        return refTokenRepo.deleteByToken(token);
     }
 
 }

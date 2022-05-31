@@ -41,14 +41,13 @@ public class UserService {
         return priUserRepo.findByPublicId(userId).orElseThrow();
     }
 
-    public PrivateUser createUser(String name, String school, String role, String email, String password) {
-        // prettify input data
-        name = StringUtils.trimWhitespace(name);
-        school = StringUtils.trimWhitespace(school);
-        role = StringUtils.trimWhitespace(role);
-        email = StringUtils.trimWhitespace(email);
-
-        // validate the data
+    public PrivateUser createUser(
+            String name,
+            String school,
+            String email,
+            String password,
+            PublicUser.Role role) {
+        // validate data
         if (name.length() < 3)
             throw new InputValidationException("Name must be at least 3 characters.");
         if (!StringUtils.hasText(school))
@@ -57,15 +56,9 @@ public class UserService {
             throw new InputValidationException("Invalid email provided.");
         if (priUserRepo.existsByEmail(email))
             throw new InputValidationException("Email already taken.");
-        PublicUser.Role userRole;
-        try {
-            userRole = PublicUser.Role.valueOf(role);
-        } catch (IllegalArgumentException e) {
-            throw new InputValidationException("Invalid school role provided.");
-        }
 
         // create user without any credentials
-        PublicUser user = new PublicUser(name,school, userRole);
+        PublicUser user = new PublicUser(name, school, role);
         user.setAvatarUrl(UiAvatar.create(name));
         user = pubUserRepo.save(user);
 
@@ -78,6 +71,23 @@ public class UserService {
         pubUserRepo.save(user);
 
         return cred;
+    }
+
+    public PrivateUser changePassword(String userId, String newPassword) {
+        PrivateUser cred = getPrivateUser(userId);
+        cred.setPassword(newPassword);
+        return priUserRepo.save(cred);
+    }
+
+    public void updateInfo(String userId, String newName, String newSchool) {
+        PublicUser user = getPublicUser(userId);
+        if (newName != null) {
+            user.setName(newName);
+            user.setAvatarUrl(UiAvatar.create(newName));
+        }
+        if (newSchool != null)
+            user.setSchool(newSchool);
+        pubUserRepo.save(user);
     }
 
 }

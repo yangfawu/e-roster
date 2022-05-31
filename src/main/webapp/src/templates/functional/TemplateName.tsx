@@ -1,6 +1,7 @@
 import React, {FC} from 'react';
 
-interface TemplateNameProps {}
+interface TemplateNameProps {
+}
 
 const TemplateName: FC<TemplateNameProps> = ({}) => {
     return (

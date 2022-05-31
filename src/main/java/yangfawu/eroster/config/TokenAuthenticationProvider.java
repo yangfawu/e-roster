@@ -6,6 +6,7 @@ import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
 import yangfawu.eroster.exception.TokenException;
+import yangfawu.eroster.model.PrivateUser;
 import yangfawu.eroster.service.JWTTokenService;
 import yangfawu.eroster.service.UserService;
 
@@ -37,9 +38,18 @@ public class TokenAuthenticationProvider extends AbstractUserDetailsAuthenticati
             UsernamePasswordAuthenticationToken authentication) throws AuthenticationException {
         Object tokenObject = authentication.getCredentials();
         return Optional.ofNullable(tokenObject)
-                        .map(String::valueOf)
-                        .map(jwtTokenSvc::verifyToken)
-                        .map(userSvc::getPrivateUser)
-                        .orElseThrow(() -> new TokenException("Can't find token " + tokenObject + "."));
+                .map(String::valueOf)
+                .map(jwtTokenSvc::verifyToken)
+                .map(claims -> {
+                    String userId = claims.getId();
+                    String password = claims.getSubject();
+                    if (userId == null || password == null)
+                        throw new TokenException("Invalid token provided.");
+                    PrivateUser cred = userSvc.getPrivateUser(userId);
+                    if (!cred.getPassword().equals(password))
+                        throw new TokenException("Access token cannot be used anymore.");
+                    return cred;
+                })
+                .orElseThrow(() -> new TokenException("Can't find token " + tokenObject + "."));
     }
 }

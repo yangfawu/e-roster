@@ -14,10 +14,7 @@ public class PublicUser {
     private String id;
 
     private String name, school, avatarUrl;
-
-    public enum Role { STUDENT, TEACHER;}
     private Role role;
-
     @Indexed(unique = true)
     private String privateUserId;
 
@@ -27,5 +24,7 @@ public class PublicUser {
         this.role = role;
         this.avatarUrl = UiAvatar.create("");
     }
+
+    public enum Role {STUDENT, TEACHER;}
 
 }

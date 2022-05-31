@@ -5,7 +5,7 @@ export const range = (length: number) => Array.from({length}, (_, i) => i);
 
 export const rangeBounds = (a: number, b: number) => range(b - a).map(v => v + a);
 
-export const forJSX = <T,S>(
+export const forJSX = <T, S>(
     iter: T[],
     func: (val: T, idx: number) => S
 ) => iter.map((a, b) => func(a, b));
@@ -13,8 +13,6 @@ export const forJSX = <T,S>(
 class ListNode<T> {
 
     private readonly _data: T | null
-    private _next: ListNode<T> | null
-    private _prev: ListNode<T> | null
 
     constructor(data: T | null) {
         this._data = data;
@@ -22,9 +20,7 @@ class ListNode<T> {
         this._prev = null;
     }
 
-    get data(): T | null {
-        return this._data;
-    }
+    private _next: ListNode<T> | null
 
     get next(): ListNode<T> | null {
         return this._next;
@@ -34,6 +30,8 @@ class ListNode<T> {
         this._next = value;
     }
 
+    private _prev: ListNode<T> | null
+
     get prev(): ListNode<T> | null {
         return this._prev;
     }
@@ -41,13 +39,16 @@ class ListNode<T> {
     set prev(value: ListNode<T> | null) {
         this._prev = value;
     }
+
+    get data(): T | null {
+        return this._data;
+    }
 }
 
 export class HistoryStack<T> {
 
     private top: ListNode<T> | null
     private cursor: ListNode<T> | null
-    private _size: number
     private cursorSize: number
 
     constructor() {
@@ -55,6 +56,18 @@ export class HistoryStack<T> {
         this.cursor = null;
         this._size = 0;
         this.cursorSize = 0;
+    }
+
+    private _size: number
+
+    get size(): number {
+        return this._size;
+    }
+
+    get current(): T | null {
+        if (this.cursor == null)
+            return null;
+        return this.cursor.data;
     }
 
     enqueue(data: T | null): HistoryStack<T> {
@@ -73,20 +86,6 @@ export class HistoryStack<T> {
         return this;
     }
 
-    get current(): T | null {
-        if (this.cursor == null)
-            return null;
-        return this.cursor.data;
-    }
-
-    private move(count: number, child: 'prev' | 'next') {
-        while (count-- > 0) {
-            if (this.cursor == null)
-                throw new Error("Encountered internal transversal error.");
-            this.cursor = this.cursor[child];
-        }
-    }
-
     moveTo(level = 0): void {
         level = Math.max(0, Math.min(level, this._size));
         if (level > this.cursorSize)
@@ -96,8 +95,12 @@ export class HistoryStack<T> {
         this.cursorSize = level;
     }
 
-    get size(): number {
-        return this._size;
+    private move(count: number, child: 'prev' | 'next') {
+        while (count-- > 0) {
+            if (this.cursor == null)
+                throw new Error("Encountered internal transversal error.");
+            this.cursor = this.cursor[child];
+        }
     }
 
 }

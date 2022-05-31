@@ -1,5 +1,6 @@
 package yangfawu.eroster.endpoint;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -8,8 +9,8 @@ import yangfawu.eroster.exception.ForbiddenException;
 import yangfawu.eroster.model.PrivateUser;
 import yangfawu.eroster.model.RefreshToken;
 import yangfawu.eroster.payload.request.LoginRequest;
-import yangfawu.eroster.payload.request.RefreshTokenRequest;
 import yangfawu.eroster.payload.request.RegisterRequest;
+import yangfawu.eroster.payload.request.TokenRequest;
 import yangfawu.eroster.payload.response.JwtResponse;
 import yangfawu.eroster.service.JWTTokenService;
 import yangfawu.eroster.service.RefreshTokenService;
@@ -25,6 +26,7 @@ public class AuthController {
     private final JWTTokenService jwtTokenSvc;
     private final UserService userSvc;
 
+    @Autowired
     public AuthController(
             RefreshTokenService refTokenSvc,
             JWTTokenService jwtTokenSvc,
@@ -34,23 +36,19 @@ public class AuthController {
         this.userSvc = userSvc;
     }
 
-    private JwtResponse fromCred(PrivateUser cred) {
-        final String USER_ID = cred.getPublicId();
-        return new JwtResponse(
-            jwtTokenSvc.createNewToken(USER_ID),
-            refTokenSvc.createRefreshToken(USER_ID)
-        );
-    }
-
     @PostMapping("/register")
     public JwtResponse register(@RequestBody RegisterRequest req) {
-        return fromCred(userSvc.createUser(
-            req.getName(),
-            req.getSchool(),
-            req.getRole(),
-            req.getEmail(),
-            req.getPassword()
-        ));
+        PrivateUser cred = userSvc.createUser(
+                req.getName(),
+                req.getSchool(),
+                req.getEmail(),
+                req.getPassword(),
+                req.getRole()
+        );
+        return new JwtResponse(
+                jwtTokenSvc.createNewToken(cred),
+                refTokenSvc.createRefreshToken(cred.getPublicId())
+        );
     }
 
     @PostMapping("/login")
@@ -61,27 +59,24 @@ public class AuthController {
         } catch (Exception e) {
             throw new ForbiddenException("Check your login info.");
         }
-
-        return fromCred(cred);
+        return new JwtResponse(
+                jwtTokenSvc.createNewToken(cred),
+                refTokenSvc.createRefreshToken(cred.getPublicId())
+        );
     }
 
     @PostMapping("/refresh")
-    public JwtResponse refreshToken(@RequestBody RefreshTokenRequest req) {
-        RefreshToken refToken;
-        try {
-            refToken = refTokenSvc.findByToken(req.getToken());
-        } catch (Exception e) {
-            throw new ForbiddenException("Invalid refresh token.");
-        }
-
+    public JwtResponse refreshToken(@RequestBody TokenRequest req) {
+        RefreshToken refToken = refTokenSvc.findByToken(req.getToken());
         return Optional.of(refToken)
-                        .map(refTokenSvc::verifyToken)
-                        .map(RefreshToken::getUserId)
-                        .map(USER_ID -> new JwtResponse(
-                            jwtTokenSvc.createNewToken(USER_ID),
-                            refToken.getToken()
-                        ))
-                        .orElseThrow(() -> new RuntimeException("Could not generate new token from refresh token."));
+                .map(refTokenSvc::verifyToken)
+                .map(RefreshToken::getUserId)
+                .map(userSvc::getPrivateUser)
+                .map(cred -> new JwtResponse(
+                        jwtTokenSvc.createNewToken(cred),
+                        refToken.getToken()
+                ))
+                .orElseThrow(() -> new RuntimeException("Could not generate new token from refresh token."));
     }
 
 }

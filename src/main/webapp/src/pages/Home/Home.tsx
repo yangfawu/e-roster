@@ -4,7 +4,8 @@ import {Container, Nav, Navbar} from "react-bootstrap";
 import {LinkContainer} from "react-router-bootstrap";
 import axios from "axios";
 
-interface HomeProps {}
+interface HomeProps {
+}
 
 // @ts-ignore
 window["axios"] = axios;
@@ -14,7 +15,7 @@ const Home: FC<HomeProps> = () => {
             <Navbar collapseOnSelect expand="sm" bg="dark" variant="dark" sticky="top">
                 <Container>
                     <LinkContainer to="/"><Navbar.Brand>E-Roster</Navbar.Brand></LinkContainer>
-                    <Navbar.Toggle aria-controls="responsive-navbar-nav" />
+                    <Navbar.Toggle aria-controls="responsive-navbar-nav"/>
                     <Navbar.Collapse id="responsive-navbar-nav" className="justify-content-end">
                         <Nav>
                             <LinkContainer to="/"><Nav.Link>Home</Nav.Link></LinkContainer>

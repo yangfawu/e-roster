@@ -16,32 +16,32 @@ import java.util.Set;
 @Log4j2
 public class ERosterApplication implements CommandLineRunner {
 
-	public static void main(String[] args) {
-		SpringApplication.run(ERosterApplication.class, args);
-	}
-	private final MongoTemplate mongoTemp;
+    private final MongoTemplate mongoTemp;
+    @Value("${app.main.wipe-database}")
+    private boolean wipeDB;
 
-	@Value("${app.main.wipe-database}")
-	private boolean wipeDB;
+    @Autowired
+    public ERosterApplication(
+            MongoTemplate mongoTemp) {
+        this.mongoTemp = mongoTemp;
+    }
 
-	@Autowired
-	public ERosterApplication(
-			MongoTemplate mongoTemp) {
-		this.mongoTemp = mongoTemp;
-	}
+    public static void main(String[] args) {
+        SpringApplication.run(ERosterApplication.class, args);
+    }
 
-	public void wipeDatabase() {
-		if (!wipeDB)
-			return;
-		Set<String> cols = mongoTemp.getCollectionNames();
-		for (String colName : cols)
-			mongoTemp.dropCollection(colName);
-		log.info("Database wiped.");
-	}
+    public void wipeDatabase() {
+        if (!wipeDB)
+            return;
+        Set<String> cols = mongoTemp.getCollectionNames();
+        for (String colName : cols)
+            mongoTemp.dropCollection(colName);
+        log.info("Database wiped.");
+    }
 
-	@Override
-	public void run(String... args) throws Exception {
-		wipeDatabase();
-	}
+    @Override
+    public void run(String... args) throws Exception {
+        wipeDatabase();
+    }
 
 }

@@ -34,10 +34,10 @@ public class TokenAuthenticationFilter extends AbstractAuthenticationProcessingF
             HttpServletResponse response) throws AuthenticationException, IOException, ServletException {
         String data = request.getHeader(HttpHeaders.AUTHORIZATION);
         String token = Optional.ofNullable(data)
-                            .map(StringUtils::trimWhitespace)
-                            .map(junk -> junk.startsWith("Bearer") ? junk.substring(6) : junk)
-                            .map(StringUtils::trimWhitespace)
-                            .orElseThrow(() -> new BadCredentialsException("No token found."));
+                .map(StringUtils::trimWhitespace)
+                .map(junk -> junk.startsWith("Bearer") ? junk.substring(6) : junk)
+                .map(StringUtils::trimWhitespace)
+                .orElseThrow(() -> new BadCredentialsException("No token found."));
         return getAuthenticationManager().authenticate(new UsernamePasswordAuthenticationToken(token, token));
     }
 
@@ -48,6 +48,6 @@ public class TokenAuthenticationFilter extends AbstractAuthenticationProcessingF
             FilterChain chain,
             Authentication authResult) throws IOException, ServletException {
         super.successfulAuthentication(request, response, chain, authResult);
-        chain.doFilter(request,response);
+        chain.doFilter(request, response);
     }
 }

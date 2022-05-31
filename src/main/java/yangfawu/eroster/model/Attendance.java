@@ -9,23 +9,11 @@ import java.util.HashMap;
 @Document(collection = "attendances")
 public class Attendance {
 
-    public enum Mark {
-        PRESENT,
-        LATE,
-        ABSENT,
-        EXCUSED,
-        UNMARKED
-    }
-
     @Id
     private String id;
-
     private String courseId;
-
     private Instant created, updated;
-
     private boolean archived;
-
     private HashMap<String, Mark> marks;
 
     public Attendance(String courseId) {
@@ -34,5 +22,13 @@ public class Attendance {
         this.updated = Instant.now();
         this.archived = false;
         this.marks = new HashMap<>();
+    }
+
+    public enum Mark {
+        PRESENT,
+        LATE,
+        ABSENT,
+        EXCUSED,
+        UNMARKED
     }
 }

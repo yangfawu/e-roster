@@ -32,7 +32,7 @@ import java.util.Arrays;
 public class WebSecurityConfig {
 
     private static final RequestMatcher PRIVATE_URLS = new OrRequestMatcher(
-        new AntPathRequestMatcher("/api/private/**")
+            new AntPathRequestMatcher("/api/private/**")
     );
     private static final RequestMatcher PUBLIC_URLS = new NegatedRequestMatcher(PRIVATE_URLS);
 
@@ -55,16 +55,16 @@ public class WebSecurityConfig {
         http
                 .sessionManagement()
                 .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
-            .and()
+                .and()
                 .exceptionHandling()
                 .defaultAuthenticationEntryPointFor(forbiddenEntryPoint(), PRIVATE_URLS)
-            .and()
+                .and()
                 .authenticationProvider(tokenAuthProvider)
                 .addFilterBefore(RESTAuthenticationFilter, AnonymousAuthenticationFilter.class)
                 .authorizeRequests()
                 .requestMatchers(PUBLIC_URLS).permitAll()
                 .requestMatchers(PRIVATE_URLS).authenticated()
-            .and()
+                .and()
                 .csrf().disable()
                 .formLogin().disable()
                 .httpBasic().disable()

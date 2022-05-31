@@ -6,7 +6,7 @@ import lombok.NonNull;
 
 @Data
 @NoArgsConstructor
-public class RefreshTokenRequest {
+public class TokenRequest {
 
     @NonNull
     private String token;

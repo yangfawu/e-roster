@@ -10,6 +10,7 @@ import yangfawu.eroster.exception.TokenException;
 
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
+import java.util.NoSuchElementException;
 
 @RestControllerAdvice
 @Log4j2
@@ -43,6 +44,12 @@ public class ApplicationExceptionHandler {
     public void handleException(HttpServletResponse response, TokenException ex) throws IOException {
         log.error("[TokenException] {}", ex.getMessage());
         response.sendError(HttpServletResponse.SC_FORBIDDEN, ex.getMessage());
+    }
+
+    @ExceptionHandler(NoSuchElementException.class)
+    public void handleException(HttpServletResponse response, NoSuchElementException ex) throws IOException {
+        log.error("[NoSuchElementException] {}", ex.getMessage());
+        response.sendError(HttpServletResponse.SC_BAD_REQUEST, ex.getMessage());
     }
 
 }

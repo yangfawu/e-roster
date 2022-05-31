@@ -12,16 +12,15 @@ import java.time.Instant;
 public class RefreshToken {
 
     @Id
-    private String id;
+    private String token;
 
     @Indexed(unique = true)
-    private String userId, token;
+    private String userId;
 
     private Instant expiration;
 
-    public RefreshToken(String userId, String token, Instant expiration) {
+    public RefreshToken(String userId, Instant expiration) {
         this.userId = userId;
-        this.token = token;
         this.expiration = expiration;
     }
 }
