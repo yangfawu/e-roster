@@ -7,7 +7,7 @@ import yangfawu.eroster.model.PublicUser;
 
 @Data
 @Builder
-public class SimpleCourseResponse {
+public class SimpleCourseResponse implements ICourseResponse {
 
     private String id, name;
     private boolean archived;

@@ -6,4 +6,9 @@ import yangfawu.eroster.model.StudentRequest;
 
 @Repository
 public interface StudentRequestRepository extends MongoRepository<StudentRequest, String> {
+
+    boolean existsByCourseIdAndAndStudentId(String courseId, String studentId);
+
+    long deleteByCourseIdAndStudentId(String courseId, String studentId);
+
 }

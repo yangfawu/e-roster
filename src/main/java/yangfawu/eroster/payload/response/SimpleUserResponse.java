@@ -6,7 +6,7 @@ import yangfawu.eroster.model.PublicUser;
 
 @Data
 @Builder
-public class SimpleUserResponse {
+public class SimpleUserResponse implements IUserResponse {
 
     private String id, name, school, avatarUrl;
 

@@ -8,7 +8,7 @@ import java.util.List;
 
 @Data
 @Builder
-public class DetailedCourseResponse {
+public class DetailedCourseResponse implements ICourseResponse {
 
     private String id, name, description;
 

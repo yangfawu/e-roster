@@ -18,7 +18,6 @@ public class Course {
 
     private Instant created;
     private boolean archived;
-
     private LinkedHashSet<String> studentIds;
 
     public Course(String teacherId, String name, String description) {

@@ -11,6 +11,7 @@ import yangfawu.eroster.payload.request.ChangePasswordRequest;
 import yangfawu.eroster.payload.request.TokenRequest;
 import yangfawu.eroster.payload.request.UserInfoRequest;
 import yangfawu.eroster.payload.response.DetailedUserResponse;
+import yangfawu.eroster.payload.response.IUserResponse;
 import yangfawu.eroster.payload.response.JwtResponse;
 import yangfawu.eroster.payload.response.SimpleUserResponse;
 import yangfawu.eroster.service.JWTTokenService;
@@ -36,16 +37,15 @@ public class UserController {
     }
 
     @GetMapping("")
-    public DetailedUserResponse getSelf(@AuthenticationPrincipal PrivateUser cred) {
-        return DetailedUserResponse.from(
-                userSvc.getPublicUser(cred.getPublicId()),
-                cred.getEmail()
-        );
-    }
-
-    @GetMapping("/{userId}")
-    public SimpleUserResponse getUser(@PathVariable String userId) {
-        return SimpleUserResponse.from(userSvc.getPublicUser(userId));
+    public IUserResponse getUser(
+            @AuthenticationPrincipal PrivateUser cred,
+            @RequestParam(required = false) String id) {
+        if (id == null)
+            return DetailedUserResponse.from(
+                    userSvc.getPublicUser(cred.getPublicId()),
+                    cred.getEmail()
+            );
+        return SimpleUserResponse.from(userSvc.getPublicUser(id));
     }
 
     @PostMapping("/logout")

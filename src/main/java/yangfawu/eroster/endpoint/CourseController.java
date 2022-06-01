@@ -1,6 +1,7 @@
 package yangfawu.eroster.endpoint;
 
 import lombok.extern.log4j.Log4j2;
+import org.springframework.data.domain.Page;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import yangfawu.eroster.exception.ForbiddenException;
@@ -8,9 +9,7 @@ import yangfawu.eroster.model.Course;
 import yangfawu.eroster.model.PrivateUser;
 import yangfawu.eroster.model.PublicUser;
 import yangfawu.eroster.payload.request.CourseInfoRequest;
-import yangfawu.eroster.payload.response.DetailedCourseResponse;
-import yangfawu.eroster.payload.response.SimpleCourseResponse;
-import yangfawu.eroster.payload.response.SimpleUserResponse;
+import yangfawu.eroster.payload.response.*;
 import yangfawu.eroster.service.CourseService;
 import yangfawu.eroster.service.UserService;
 
@@ -47,28 +46,23 @@ public class CourseController {
         );
     }
 
-    private SimpleCourseResponse getSimpleCourse(String courseId) {
+    @GetMapping("/{courseId}")
+    public ICourseResponse getCourse(
+            @PathVariable String courseId,
+            @RequestParam(defaultValue = "false") boolean detailed) {
         Course course = courseSvc.getCourse(courseId);
-        return SimpleCourseResponse.from(
+        SimpleCourseResponse base = SimpleCourseResponse.from(
                 course,
                 userSvc.getPublicUser(course.getTeacherId())
         );
-    }
+        if (!detailed)
+            return base;
 
-    @GetMapping("/{courseId}")
-    public SimpleCourseResponse getCourse(@PathVariable String courseId) {
-        return getSimpleCourse(courseId);
-    }
-
-    @GetMapping("/detailed/{courseId}")
-    public DetailedCourseResponse getDetailedCourse(@PathVariable String courseId) {
-        Course course = courseSvc.getCourse(courseId);
         List<SimpleUserResponse> students = course.getStudentIds()
                 .stream()
                 .map(userSvc::getPublicUser)
                 .map(SimpleUserResponse::from)
                 .collect(Collectors.toList());
-        SimpleCourseResponse base = getSimpleCourse(courseId);
         return DetailedCourseResponse.builder()
                 .id(base.getId())
                 .name(base.getName())
@@ -80,33 +74,31 @@ public class CourseController {
                 .build();
     }
 
-    private List<SimpleCourseResponse> getTeacherCourses(String userId) {
-        // TODO
-        return List.of();
-    }
-
-    private List<SimpleCourseResponse> getStudentCourses(String userId) {
-        // TODO
-        return List.of();
-    }
-
-    @GetMapping("")
-    public Object getCourses(@AuthenticationPrincipal PrivateUser cred) {
+    @GetMapping("/list")
+    public CourseListResponse getCourses(
+            @AuthenticationPrincipal PrivateUser cred,
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "10") int size) {
         PublicUser user = userSvc.getPublicUser(cred.getPublicId());
+
         final String USER_ID = user.getId();
-        if (user.getRole() == PublicUser.Role.TEACHER)
-            return getTeacherCourses(USER_ID);
-        return getStudentCourses(USER_ID);
-    }
+        Page<Course> result = user.getRole() == PublicUser.Role.TEACHER ?
+                courseSvc.getTeacherCourses(USER_ID, page, size) :
+                courseSvc.getStudentCourses(USER_ID, page, size);
 
-    private void checkForAccess(PrivateUser cred, String courseId) {
-        PublicUser user = userSvc.getPublicUser(cred.getPublicId());
-        if (user.getRole() != PublicUser.Role.TEACHER)
-            throw new ForbiddenException("User is not a teacher.");
-
-        Course course = courseSvc.getCourse(courseId);
-        if (!course.getTeacherId().equals(user.getId()))
-            throw new ForbiddenException("User does not teach the course.");
+        List<SimpleCourseResponse> courses = result.getContent()
+                .stream()
+                .map(course -> SimpleCourseResponse.from(
+                        course,
+                        userSvc.getPublicUser(course.getTeacherId())
+                ))
+                .collect(Collectors.toList());
+        return CourseListResponse.builder()
+                .page(result.getNumber())
+                .totalPages(result.getTotalPages())
+                .totalItems(result.getTotalElements())
+                .result(courses)
+                .build();
     }
 
     @PostMapping("/update/{courseId}")
@@ -114,7 +106,9 @@ public class CourseController {
             @AuthenticationPrincipal PrivateUser cred,
             @PathVariable String courseId,
             @RequestBody CourseInfoRequest req) {
-        checkForAccess(cred, courseId);
+        Course course = courseSvc.getCourse(courseId);
+        if (!course.getTeacherId().equals(cred.getPublicId()))
+            throw new ForbiddenException("User does not teach the course.");
         courseSvc.updateCourse(
                 courseId,
                 req.getName(),
@@ -126,7 +120,9 @@ public class CourseController {
     public void archiveCourse(
             @AuthenticationPrincipal PrivateUser cred,
             @PathVariable String courseId) {
-        checkForAccess(cred, courseId);
+        Course course = courseSvc.getCourse(courseId);
+        if (!course.getTeacherId().equals(cred.getPublicId()))
+            throw new ForbiddenException("User does not teach the course.");
         courseSvc.archiveCourse(courseId);
     }
 

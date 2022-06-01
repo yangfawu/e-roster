@@ -6,4 +6,9 @@ import yangfawu.eroster.model.CourseInvitation;
 
 @Repository
 public interface CourseInvitationRepository extends MongoRepository<CourseInvitation, String> {
+
+    boolean existsByCourseIdAndAndInviteeId(String courseId, String inviteeId);
+
+    long deleteByCourseIdAndInviteeId(String courseId, String inviteeId);
+
 }
