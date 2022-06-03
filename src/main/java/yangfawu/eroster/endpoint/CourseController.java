@@ -75,7 +75,7 @@ public class CourseController {
     }
 
     @GetMapping("/list")
-    public CourseListResponse getCourses(
+    public PageResponse<SimpleCourseResponse> getCourses(
             @AuthenticationPrincipal PrivateUser cred,
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "10") int size) {
@@ -93,12 +93,7 @@ public class CourseController {
                         userSvc.getPublicUser(course.getTeacherId())
                 ))
                 .collect(Collectors.toList());
-        return CourseListResponse.builder()
-                .page(result.getNumber())
-                .totalPages(result.getTotalPages())
-                .totalItems(result.getTotalElements())
-                .result(courses)
-                .build();
+        return PageResponse.from(result, courses);
     }
 
     @PostMapping("/update/{courseId}")

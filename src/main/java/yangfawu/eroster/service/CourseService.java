@@ -1,14 +1,13 @@
 package yangfawu.eroster.service;
 
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import yangfawu.eroster.exception.InputValidationException;
 import yangfawu.eroster.model.Course;
 import yangfawu.eroster.model.PublicUser;
 import yangfawu.eroster.repository.CourseRepository;
+import yangfawu.eroster.util.ServiceUtil;
 
 @Service
 public class CourseService {
@@ -58,25 +57,17 @@ public class CourseService {
         courseRepo.save(course);
     }
 
-    private Pageable generatePageable(int page, int size) {
-        if (page < 1)
-            throw new InputValidationException("Page numbers are 1-indexed.");
-        if (size < 1)
-            throw new InputValidationException("Page size has to be at least 1.");
-        return PageRequest.of(page - 1, size);
-    }
-
     public Page<Course> getStudentCourses(String studentId, int page, int size) {
         return courseRepo.findByStudentIdsContainingOrderByCreated(
                 studentId,
-                generatePageable(page, size)
+                ServiceUtil.generatePageable(page, size)
         );
     }
 
     public Page<Course> getTeacherCourses(String teacherId, int page, int size) {
         return courseRepo.findByTeacherId(
                 teacherId,
-                generatePageable(page, size)
+                ServiceUtil.generatePageable(page, size)
         );
     }
 
