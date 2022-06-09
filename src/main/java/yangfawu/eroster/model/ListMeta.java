@@ -5,16 +5,16 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.time.Instant;
-
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class Course {
+public class ListMeta {
 
-    private String id, name, description, teacherId;
-    private boolean archived;
-    private Instant created;
+    public static ListMeta defaultBuild() {
+        return ListMeta.builder().count(0).build();
+    }
+
+    private int count;
 
 }

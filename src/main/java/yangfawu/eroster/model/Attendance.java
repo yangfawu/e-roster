@@ -1,36 +1,30 @@
 package yangfawu.eroster.model;
 
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
-import org.springframework.data.annotation.Id;
-import org.springframework.data.mongodb.core.mapping.Document;
+import lombok.NoArgsConstructor;
 
 import java.time.Instant;
 import java.util.HashMap;
 
-@Document(collection = "attendances")
 @Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
 public class Attendance {
 
-    @Id
-    private String id;
-    private String courseId;
-    private Instant created, updated;
-    private boolean archived;
-    private HashMap<String, Mark> marks;
-
-    public Attendance(String courseId) {
-        this.courseId = courseId;
-        this.created = Instant.now();
-        this.updated = Instant.now();
-        this.archived = false;
-        this.marks = new HashMap<>();
-    }
-
-    public enum Mark {
+    public enum AttendanceMark {
         PRESENT,
-        LATE,
         ABSENT,
+        LATE,
         EXCUSED,
-        UNMARKED
+        NA
     }
+
+    private int index;
+    private boolean finalized;
+    private Instant created, updated;
+    private HashMap<String, AttendanceMark> marks;
+
 }

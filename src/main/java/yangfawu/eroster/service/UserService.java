@@ -1,93 +1,129 @@
 package yangfawu.eroster.service;
 
-import org.apache.commons.validator.routines.EmailValidator;
-import org.springframework.beans.factory.annotation.Autowired;
+import com.google.cloud.firestore.CollectionReference;
+import com.google.cloud.firestore.DocumentReference;
+import com.google.cloud.firestore.Firestore;
+import com.google.cloud.firestore.SetOptions;
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.UserRecord;
+import com.google.firebase.auth.UserRecord.CreateRequest;
+import com.google.firebase.auth.UserRecord.UpdateRequest;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.log4j.Log4j2;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.stereotype.Service;
-import org.springframework.util.StringUtils;
 import yangfawu.eroster.exception.InputValidationException;
-import yangfawu.eroster.model.PrivateUser;
-import yangfawu.eroster.model.PublicUser;
-import yangfawu.eroster.repository.PrivateUserRepository;
-import yangfawu.eroster.repository.PublicUserRepository;
-import yangfawu.eroster.util.UiAvatar;
+import yangfawu.eroster.model.ListMeta;
+import yangfawu.eroster.model.User;
+import yangfawu.eroster.payload.request.UserRegisterRequest;
+import yangfawu.eroster.payload.request.UserUpdateRequest;
+import yangfawu.eroster.repository.UserRepository;
+
+import java.util.*;
 
 @Service
+@RequiredArgsConstructor
+@Log4j2
 public class UserService {
 
-    private final PublicUserRepository pubUserRepo;
-    private final PrivateUserRepository priUserRepo;
+    @Value("${app.auth.custom-claims-name}")
+    private String CUSTOM_CLAIMS;
 
-    @Autowired
-    public UserService(
-            PublicUserRepository pubUserRepo,
-            PrivateUserRepository priUserRepo) {
-        this.pubUserRepo = pubUserRepo;
-        this.priUserRepo = priUserRepo;
+    private final FirebaseAuth auth;
+    private final Firestore db;
+    private final UserRepository userRepo;
+
+    public DocumentReference userRef(String id) {
+        return db.collection("users").document(id);
     }
 
-    public boolean userExistsById(String id) {
-        return pubUserRepo.existsById(id);
+    public CollectionReference userCoursesRef(String id) {
+        return userRef(id).collection("courses");
     }
 
-    public PublicUser getPublicUser(String id) {
-        return pubUserRepo.findById(id).orElseThrow();
+    public CollectionReference userInvitationsRef(String id) {
+        return userRef(id).collection("invitations");
     }
 
-    public PrivateUser getPrivateUser(String email, String password) {
-        return priUserRepo.findByEmailAndPassword(email, password).orElseThrow();
+    public DocumentReference metaRef(CollectionReference ref) {
+        return ref.document("_meta");
     }
 
-    public PrivateUser getPrivateUser(String userId) {
-        return priUserRepo.findByPublicId(userId).orElseThrow();
-    }
-
-    public PrivateUser createUser(
-            String name,
-            String school,
-            String email,
-            String password,
-            PublicUser.Role role) {
-        // validate data
-        if (name.length() < 3)
-            throw new InputValidationException("Name must be at least 3 characters.");
-        if (!StringUtils.hasText(school))
-            throw new InputValidationException("School name not provided.");
-        if (!EmailValidator.getInstance().isValid(email))
-            throw new InputValidationException("Invalid email provided.");
-        if (priUserRepo.existsByEmail(email))
-            throw new InputValidationException("Email already taken.");
-
-        // create user without any credentials
-        PublicUser user = new PublicUser(name, school, role);
-        user.setAvatarUrl(UiAvatar.create(name));
-        user = pubUserRepo.save(user);
-
-        // create user credentials
-        PrivateUser cred = new PrivateUser(user.getId(), email, password);
-        cred = priUserRepo.save(cred);
-
-        // hook credentials ID to public
-        user.setPrivateUserId(cred.getId());
-        pubUserRepo.save(user);
-
-        return cred;
-    }
-
-    public PrivateUser changePassword(String userId, String newPassword) {
-        PrivateUser cred = getPrivateUser(userId);
-        cred.setPassword(newPassword);
-        return priUserRepo.save(cred);
-    }
-
-    public void updateInfo(String userId, String newName, String newSchool) {
-        PublicUser user = getPublicUser(userId);
-        if (newName != null) {
-            user.setName(newName);
-            user.setAvatarUrl(UiAvatar.create(newName));
+    public User register(UserRegisterRequest req) {
+        // create a new auth account
+        CreateRequest createRequest;
+        try {
+            createRequest = new CreateRequest()
+                    .setEmail(req.getEmail())
+                    .setPassword(req.getPassword())
+                    .setDisplayName(req.getName())
+                    .setPhotoUrl(ServiceUtil.create(req.getName()));
+        } catch (IllegalArgumentException e) {
+            throw new InputValidationException("Some inputs are illegal.");
         }
-        if (newSchool != null)
-            user.setSchool(newSchool);
-        pubUserRepo.save(user);
+        UserRecord rec = ServiceUtil.handleFuture(auth.createUserAsync(createRequest));
+
+        // update Firebase to include user roles in custom claims
+        // add User object to the database
+        final String UID = rec.getUid();
+        User newUser = User.builder()
+                .id(UID)
+                .email(rec.getEmail())
+                .name(rec.getDisplayName())
+                .accountType(req.getAccountType())
+                .build();
+        Map<String, Object> customClaims = Map.of(
+                CUSTOM_CLAIMS,
+                Arrays.asList(req.getAccountType().toString())
+        );
+        ServiceUtil.handleFutures(
+                auth.setCustomUserClaimsAsync(UID, customClaims),
+                userRef(UID).create(newUser),
+                metaRef(userCoursesRef(UID)).create(ListMeta.defaultBuild()),
+                metaRef(userInvitationsRef(UID)).create(ListMeta.defaultBuild())
+        );
+
+        // return newly created user if everything is successful
+        return newUser;
+    }
+
+    public User getUserById(String id) {
+        User user = ServiceUtil.handleFuture(userRef(id).get()).toObject(User.class);
+        return Optional.ofNullable(user)
+                .orElseThrow(() -> new NoSuchElementException("Can't find user."));
+    }
+
+    public String getUserIdFromFirebaseJwt(Jwt token) {
+        String id = token.getClaimAsString("user_id");
+        return Optional.ofNullable(id)
+                .orElseThrow(() -> new InputValidationException("Token does not contain required information."));
+    }
+
+    public User updateUser(Jwt token, UserUpdateRequest req) {
+        // fetch user ID from token
+        final String UID = getUserIdFromFirebaseJwt(token);
+        UpdateRequest update = new UpdateRequest(UID);
+        Map<String, Object> dbUpdate = new HashMap<>();
+        try {
+            if (req.getName() != null) {
+                update.setDisplayName(req.getName());
+                update.setPhotoUrl(ServiceUtil.create(req.getName()));
+                dbUpdate.put("name", req.getName());
+            }
+            // add other changes
+        } catch (IllegalArgumentException e) {
+            throw new InputValidationException("Some inputs are illegal.");
+        }
+
+        // apply auth and database updates
+        ServiceUtil.handleFutures(
+                auth.updateUserAsync(update),
+                userRef(UID).set(dbUpdate, SetOptions.merge())
+        );
+
+        // return the new User object after the update
+        return getUserById(UID);
     }
 
 }

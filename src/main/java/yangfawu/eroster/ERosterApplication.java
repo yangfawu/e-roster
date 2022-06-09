@@ -1,41 +1,59 @@
 package yangfawu.eroster;
 
+import com.google.api.client.util.Lists;
+import com.google.cloud.firestore.Firestore;
+import com.google.firebase.auth.*;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.data.mongodb.core.MongoTemplate;
-import org.springframework.data.mongodb.repository.config.EnableMongoRepositories;
 
-import java.util.Set;
+import java.util.List;
+import java.util.concurrent.ExecutionException;
+import java.util.stream.Collectors;
 
 @SpringBootApplication
-@EnableMongoRepositories
+@RequiredArgsConstructor
 @Log4j2
 public class ERosterApplication implements CommandLineRunner {
 
-    private final MongoTemplate mongoTemp;
     @Value("${app.main.wipe-database}")
     private boolean wipeDB;
 
-    @Autowired
-    public ERosterApplication(
-            MongoTemplate mongoTemp) {
-        this.mongoTemp = mongoTemp;
-    }
+    private final FirebaseAuth auth;
+    private final Firestore db;
 
     public static void main(String[] args) {
         SpringApplication.run(ERosterApplication.class, args);
     }
 
-    public void wipeDatabase() {
+    public void wipeDatabase() throws FirebaseAuthException, ExecutionException, InterruptedException {
         if (!wipeDB)
             return;
-        Set<String> cols = mongoTemp.getCollectionNames();
-        for (String colName : cols)
-            mongoTemp.dropCollection(colName);
+        // wipe database
+        log.warn("Please manually wipe Firestore on app.");
+
+        // wipe accounts
+        ListUsersPage userPage;
+        while (true) {
+            userPage = auth.listUsers(null);
+            if (userPage == null)
+                break;
+            List<String> users = Lists.newArrayList(userPage.getValues())
+                            .stream()
+                            .map(ExportedUserRecord::getUid)
+                            .collect(Collectors.toList());
+            if (users.size() < 1)
+                break;
+            DeleteUsersResult result = auth.deleteUsersAsync(users).get();
+            log.info("Successfully deleted {} users.", result.getSuccessCount());
+            log.info("Failed to delete {} users.", result.getFailureCount());
+            for (ErrorInfo error : result.getErrors())
+                log.error("Error #{}, reason: {}", error.getIndex(), error.getReason());
+        }
+
         log.info("Database wiped.");
     }
 

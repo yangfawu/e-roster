@@ -1,20 +1,18 @@
 package yangfawu.eroster.model;
 
 import lombok.AllArgsConstructor;
-import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import lombok.experimental.SuperBuilder;
 
 import java.time.Instant;
 
 @Data
-@Builder
+@SuperBuilder
 @NoArgsConstructor
 @AllArgsConstructor
-public class Course {
+public class Connection extends ListReferenceItem {
 
-    private String id, name, description, teacherId;
-    private boolean archived;
     private Instant created;
 
 }

@@ -1,7 +1,6 @@
 # e-roster
 
-This is a project that provides an easy way to take attendance in any learning environment by using Spring Web for REST
-and MongoDB as the database.
+This is a project that provides an easy way to take attendance in any learning environment by using Spring Web and Firebase.
 
 ### intended features
 

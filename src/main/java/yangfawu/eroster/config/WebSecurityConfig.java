@@ -1,33 +1,27 @@
 package yangfawu.eroster.config;
 
 import lombok.extern.log4j.Log4j2;
-import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpStatus;
-import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.authentication.ProviderManager;
 import org.springframework.security.config.annotation.method.configuration.EnableGlobalMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
-import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
 import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.security.web.SecurityFilterChain;
-import org.springframework.security.web.authentication.AnonymousAuthenticationFilter;
-import org.springframework.security.web.authentication.AuthenticationFailureHandler;
 import org.springframework.security.web.authentication.HttpStatusEntryPoint;
-import org.springframework.security.web.authentication.SimpleUrlAuthenticationSuccessHandler;
 import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 import org.springframework.security.web.util.matcher.NegatedRequestMatcher;
 import org.springframework.security.web.util.matcher.OrRequestMatcher;
 import org.springframework.security.web.util.matcher.RequestMatcher;
 
-import javax.servlet.http.HttpServletResponse;
-import java.util.Arrays;
+import java.util.Collection;
+import java.util.Optional;
+import java.util.stream.Collectors;
 
-@Configuration
-@EnableWebSecurity
-@EnableGlobalMethodSecurity(prePostEnabled = true)
+@EnableGlobalMethodSecurity(prePostEnabled = true, securedEnabled = true)
 @Log4j2
 public class WebSecurityConfig {
 
@@ -36,65 +30,25 @@ public class WebSecurityConfig {
     );
     private static final RequestMatcher PUBLIC_URLS = new NegatedRequestMatcher(PRIVATE_URLS);
 
-    private static TokenAuthenticationFilter RESTAuthenticationFilter; // acts like a bean
-    private final TokenAuthenticationProvider tokenAuthProvider;
-
-
-    @Autowired
-    public WebSecurityConfig(TokenAuthenticationProvider tokenAuthProvider) {
-        this.tokenAuthProvider = tokenAuthProvider;
-    }
+    @Value("${app.auth.custom-claims-name}")
+    private String CUSTOM_CLAIMS;
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
-        if (RESTAuthenticationFilter == null) {
-            RESTAuthenticationFilter = new TokenAuthenticationFilter(PRIVATE_URLS, authenticationManager());
-            RESTAuthenticationFilter.setAuthenticationSuccessHandler(authSuccessHandler());
-            RESTAuthenticationFilter.setAuthenticationFailureHandler(authFailureHandler());
-        }
-        http
-                .sessionManagement()
-                .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
-                .and()
-                .exceptionHandling()
-                .defaultAuthenticationEntryPointFor(forbiddenEntryPoint(), PRIVATE_URLS)
-                .and()
-                .authenticationProvider(tokenAuthProvider)
-                .addFilterBefore(RESTAuthenticationFilter, AnonymousAuthenticationFilter.class)
-                .authorizeRequests()
-                .requestMatchers(PUBLIC_URLS).permitAll()
-                .requestMatchers(PRIVATE_URLS).authenticated()
-                .and()
-                .csrf().disable()
-                .formLogin().disable()
-                .httpBasic().disable()
-                .logout().disable();
+        http.sessionManagement()
+                        .sessionCreationPolicy(SessionCreationPolicy.STATELESS);
+        http.exceptionHandling()
+                .defaultAuthenticationEntryPointFor(forbiddenEntryPoint(), PRIVATE_URLS);
+        http.authorizeRequests()
+                        .requestMatchers(PUBLIC_URLS).permitAll()
+                        .requestMatchers(PRIVATE_URLS).authenticated();
+        http.csrf().disable();
+        http.formLogin().disable();
+        http.httpBasic().disable();
+        http.oauth2ResourceServer()
+                .jwt()
+                .jwtAuthenticationConverter(jwtAuthenticationConverter());
         return http.build();
-    }
-
-    @Bean
-    public AuthenticationManager authenticationManager() {
-        return new ProviderManager(Arrays.asList(tokenAuthProvider));
-    }
-
-    @Bean
-    public SimpleUrlAuthenticationSuccessHandler authSuccessHandler() {
-        SimpleUrlAuthenticationSuccessHandler successHandler = new SimpleUrlAuthenticationSuccessHandler();
-        successHandler.setRedirectStrategy((request, response, url) -> {
-            // INTENTIONALLY LEFT BLANK FOR NO REDIRECT
-        });
-        return successHandler;
-    }
-
-    /**
-     * Triggers when a request is made to a secure channel without a proper token.
-     */
-    @Bean
-    public AuthenticationFailureHandler authFailureHandler() {
-        return (request, response, exception) -> {
-            log.error("{} :: {}", request.getRequestURL(), exception.getMessage());
-            response.sendError(HttpServletResponse.SC_UNAUTHORIZED, exception.getMessage());
-        };
     }
 
     @Bean
@@ -102,18 +56,18 @@ public class WebSecurityConfig {
         return new HttpStatusEntryPoint(HttpStatus.FORBIDDEN);
     }
 
-//    @Bean
-//    public AuthenticationEntryPoint authenticationEntryPoint() {
-//        return (request, response, authException) -> {
-//            System.out.println("authenticationEntryPoint");
-//        };
-//    }
-//
-//    @Bean
-//    public AccessDeniedHandler accessDeniedHandler() {
-//        return (request, response, accessDeniedException) -> {
-//            System.out.println("accessDeniedHandler");
-//        };
-//    }
+    @Bean
+    public JwtAuthenticationConverter jwtAuthenticationConverter() {
+        JwtAuthenticationConverter converter = new JwtAuthenticationConverter();
+        converter.setJwtGrantedAuthoritiesConverter(jwt ->
+                Optional.ofNullable(jwt.getClaimAsStringList(CUSTOM_CLAIMS))
+                        .stream()
+                        .flatMap(Collection::stream)
+                        .map(SimpleGrantedAuthority::new)
+                        .collect(Collectors.toList())
+        );
+        return converter;
+    }
+
 
 }

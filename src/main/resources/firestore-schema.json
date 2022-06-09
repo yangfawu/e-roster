@@ -1,0 +1,75 @@
+{
+  "COL-users": {
+    "{ID}": {
+      "id": "{ID}",
+      "email": "String",
+      "name": "String",
+      "accountType": "UserType",
+      "COL-courses": {
+        "_meta": {
+          "count": "int"
+        },
+        "{ID}": {
+          "id": "{ID}",
+          "index": "int",
+          "ref": "[COL-courses]{ID}"
+        }
+      },
+      "COL-invitations": {
+        "_meta": {
+          "count": "int"
+        },
+        "{ID}": {
+          "id": "{ID}",
+          "index": "int",
+          "ref": "[COL-courses]{ID}",
+          "created": "Instant"
+        }
+      }
+    }
+  },
+  "COL-courses": {
+    "{ID}": {
+      "id": "{ID}",
+      "name": "String",
+      "description": "String",
+      "teacherId": "[COL-users]{ID}",
+      "archived": "boolean",
+      "created": "Instant",
+      "COL-students": {
+        "_meta": {
+          "count": "int"
+        },
+        "{ID}": {
+          "id": "{ID}",
+          "index": "int",
+          "ref": "[COL-users]{ID}"
+        }
+      },
+      "COL-attendances": {
+        "_meta": {
+          "count": "int"
+        },
+        "{ID}": {
+          "id": "{ID}",
+          "index": "int",
+          "finalized": "boolean",
+          "created": "Instant",
+          "updated": "Instant",
+          "marks": "Map<String, Mark>"
+        }
+      },
+      "COL-requests": {
+        "_meta": {
+          "count": "int"
+        },
+        "{ID}": {
+          "id": "{ID}",
+          "index": "int",
+          "ref": "[COL-courses]{ID}",
+          "created": "Instant"
+        }
+      }
+    }
+  }
+}
