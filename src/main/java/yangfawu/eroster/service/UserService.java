@@ -1,8 +1,5 @@
 package yangfawu.eroster.service;
 
-import com.google.cloud.firestore.CollectionReference;
-import com.google.cloud.firestore.DocumentReference;
-import com.google.cloud.firestore.Firestore;
 import com.google.cloud.firestore.SetOptions;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.UserRecord;
@@ -14,7 +11,6 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.stereotype.Service;
 import yangfawu.eroster.exception.InputValidationException;
-import yangfawu.eroster.model.ListMeta;
 import yangfawu.eroster.model.User;
 import yangfawu.eroster.payload.request.UserRegisterRequest;
 import yangfawu.eroster.payload.request.UserUpdateRequest;
@@ -31,24 +27,9 @@ public class UserService {
     private String CUSTOM_CLAIMS;
 
     private final FirebaseAuth auth;
-    private final Firestore db;
     private final UserRepository userRepo;
-
-    public DocumentReference userRef(String id) {
-        return db.collection("users").document(id);
-    }
-
-    public CollectionReference userCoursesRef(String id) {
-        return userRef(id).collection("courses");
-    }
-
-    public CollectionReference userInvitationsRef(String id) {
-        return userRef(id).collection("invitations");
-    }
-
-    public DocumentReference metaRef(CollectionReference ref) {
-        return ref.document("_meta");
-    }
+    private final CoursesCollectionService coursesListSvc;
+    private final InvitationsCollectionService invListSvc;
 
     public User register(UserRegisterRequest req) {
         // create a new auth account
@@ -79,24 +60,22 @@ public class UserService {
         );
         ServiceUtil.handleFutures(
                 auth.setCustomUserClaimsAsync(UID, customClaims),
-                userRef(UID).create(newUser),
-                metaRef(userCoursesRef(UID)).create(ListMeta.defaultBuild()),
-                metaRef(userInvitationsRef(UID)).create(ListMeta.defaultBuild())
+                userRepo.ref(UID).create(newUser)
         );
+        coursesListSvc.initMeta(UID);
+        invListSvc.initMeta(UID);
 
         // return newly created user if everything is successful
         return newUser;
     }
 
     public User getUserById(String id) {
-        User user = ServiceUtil.handleFuture(userRef(id).get()).toObject(User.class);
-        return Optional.ofNullable(user)
+        return Optional.ofNullable(userRepo.find(id))
                 .orElseThrow(() -> new NoSuchElementException("Can't find user."));
     }
 
     public String getUserIdFromFirebaseJwt(Jwt token) {
-        String id = token.getClaimAsString("user_id");
-        return Optional.ofNullable(id)
+        return Optional.ofNullable(token.getClaimAsString("user_id"))
                 .orElseThrow(() -> new InputValidationException("Token does not contain required information."));
     }
 
@@ -119,7 +98,7 @@ public class UserService {
         // apply auth and database updates
         ServiceUtil.handleFutures(
                 auth.updateUserAsync(update),
-                userRef(UID).set(dbUpdate, SetOptions.merge())
+                userRepo.ref(UID).set(dbUpdate, SetOptions.merge())
         );
 
         // return the new User object after the update

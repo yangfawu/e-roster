@@ -1,18 +1,18 @@
 package yangfawu.eroster.model;
 
 import lombok.AllArgsConstructor;
-import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import lombok.experimental.SuperBuilder;
 
 import java.time.Instant;
 import java.util.HashMap;
 
 @Data
-@Builder
+@SuperBuilder
 @NoArgsConstructor
 @AllArgsConstructor
-public class Attendance {
+public class Attendance extends AbstractIdEntity {
 
     public enum AttendanceMark {
         PRESENT,
@@ -22,7 +22,7 @@ public class Attendance {
         NA
     }
 
-    private int index;
+    private String courseId, authorId;
     private boolean finalized;
     private Instant created, updated;
     private HashMap<String, AttendanceMark> marks;

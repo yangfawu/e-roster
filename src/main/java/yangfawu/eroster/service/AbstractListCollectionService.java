@@ -1,5 +1,6 @@
 package yangfawu.eroster.service;
 
+import com.google.api.core.ApiFuture;
 import com.google.cloud.firestore.*;
 import lombok.Getter;
 import yangfawu.eroster.model.ListMeta;
@@ -48,6 +49,22 @@ public abstract class AbstractListCollectionService<T extends ListReferenceItem>
         return ref(id).document(itemId);
     }
 
+    public int getCount(String id) {
+        return getMeta(id).getCount();
+    }
+
+    public void initMeta(String id) {
+        ServiceUtil.handleFuture(metaRef(id).create(ListMeta.defaultBuild()));
+    }
+
+    public boolean hasItem(String id, String ref) {
+        Query query = ref(id)
+                .whereNotEqualTo(FieldPath.documentId(), META_KEY)
+                .whereEqualTo("ref", ref)
+                .limit(1);
+        return ServiceUtil.handleFuture(query.get()).getDocuments().size() > 0;
+    }
+
     public List<T> getItems(String id, int start, int size) {
         Query query = ref(id)
                 .whereNotEqualTo(FieldPath.documentId(), META_KEY)
@@ -60,17 +77,41 @@ public abstract class AbstractListCollectionService<T extends ListReferenceItem>
                 .collect(Collectors.toList());
     }
 
+    public boolean deleteItem(String id, String ref) {
+        if (!hasItem(id, ref))
+            return false;
+        Query query = ref(id)
+                .whereNotEqualTo(FieldPath.documentId(), META_KEY)
+                .whereEqualTo("ref", ref)
+                .limit(1);
+        List<ApiFuture> tasks = ServiceUtil.handleFuture(query.get()).getDocuments()
+                .stream()
+                .map(DocumentSnapshot::getReference)
+                .map(DocumentReference::delete)
+                .collect(Collectors.toList());
+        tasks.add(metaRef(id).update("pointer", FieldValue.increment(-tasks.size())));
+        ServiceUtil.handleFutures(tasks.toArray(new ApiFuture[tasks.size()]));
+        return true;
+    }
+
     public void addItem(String id, T item) {
         if (item.getRef() == null)
             throw new IllegalArgumentException("Item must contain reference.");
+        if (hasItem(id, item.getRef()))
+            throw new IllegalArgumentException("Item already in collection.");
 
         item.setIndex(getMeta(id).getCount());
         item.setId(newItemId(id));
 
         ServiceUtil.handleFutures(
-                metaRef(id).update("count", FieldValue.increment(1)),
+                metaRef(id).update(
+                        "count", FieldValue.increment(1),
+                        "pointer", FieldValue.increment(1)
+                ),
                 itemRef(id, item.getId()).create(item)
         );
     }
+
+    public abstract void addReference(String rootId, String reference);
 
 }

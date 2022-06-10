@@ -1,22 +1,22 @@
 package yangfawu.eroster.model;
 
 import lombok.AllArgsConstructor;
-import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import lombok.experimental.SuperBuilder;
 
 @Data
-@Builder
+@SuperBuilder
 @NoArgsConstructor
 @AllArgsConstructor
-public class User {
+public class User extends AbstractIdEntity {
 
     public enum UserType {
         STUDENT,
         TEACHER
     }
 
-    private String id, email, name;
+    private String email, name;
     private UserType accountType;
 
 }

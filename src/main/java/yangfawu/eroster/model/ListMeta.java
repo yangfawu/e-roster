@@ -12,9 +12,13 @@ import lombok.NoArgsConstructor;
 public class ListMeta {
 
     public static ListMeta defaultBuild() {
-        return ListMeta.builder().count(0).build();
+        return ListMeta.builder()
+                .count(0)
+                .pointer(0)
+                .build();
     }
 
     private int count;
+    private int pointer;
 
 }

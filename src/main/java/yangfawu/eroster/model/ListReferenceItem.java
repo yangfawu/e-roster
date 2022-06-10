@@ -9,9 +9,8 @@ import lombok.experimental.SuperBuilder;
 @SuperBuilder
 @NoArgsConstructor
 @AllArgsConstructor
-public class ListReferenceItem {
+public class ListReferenceItem extends AbstractIdEntity {
 
-    private String id;
     private int index;
     private String ref;
 
