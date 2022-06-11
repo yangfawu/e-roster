@@ -66,6 +66,12 @@ public abstract class AbstractListCollectionService<T extends ListReferenceItem>
     }
 
     public List<T> getItems(String id, int start, int size) {
+        if (start < 0)
+            throw new IllegalArgumentException("Start index must be non-negative.");
+        if (size < 0)
+            throw new IllegalArgumentException("Size must be non-negative.");
+        if (size < 1)
+            return List.of();
         Query query = ref(id)
                 .whereNotEqualTo(FieldPath.documentId(), META_KEY)
                 .orderBy("index", Query.Direction.DESCENDING)

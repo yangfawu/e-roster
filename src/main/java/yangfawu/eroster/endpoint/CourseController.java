@@ -1,57 +1,72 @@
 package yangfawu.eroster.endpoint;
 
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.web.bind.annotation.*;
+import yangfawu.eroster.model.Course;
+import yangfawu.eroster.model.ListReferenceItem;
+import yangfawu.eroster.payload.request.CourseCreateRequest;
+import yangfawu.eroster.payload.request.CourseUpdateRequest;
+import yangfawu.eroster.service.CourseService;
+
+import java.util.List;
 
 @RestController
+@RequiredArgsConstructor
 @RequestMapping("/api/private/course")
 public class CourseController {
 
-    public Object getCourseIds(int start, int size) {
-        // get the course IDs affiliated with the user based on starting index and page size
-        return null;
+    private final CourseService courseSvc;
+
+    @GetMapping("")
+    public List<ListReferenceItem> getCourseIds(
+            @AuthenticationPrincipal Jwt token,
+            @RequestParam(defaultValue = "0") int start,
+            @RequestParam(defaultValue = "10") int size) {
+        return courseSvc.getCourseIds(token, start, size);
     }
 
-    public Object getStudentIds(int courseId, int start, int size) {
-        // get course by ID
-        // check that the user is the teacher or in the class
-        // get student Ids ased on starting index and page size
-        return null;
+    @GetMapping("/students/{courseId}")
+    public List<ListReferenceItem> getStudentIds(
+            @AuthenticationPrincipal Jwt token,
+            @PathVariable String courseId,
+            @RequestParam(defaultValue = "0") int start,
+            @RequestParam(defaultValue = "10") int size) {
+        return courseSvc.getStudentIds(token, courseId, start, size);
     }
 
-    public Object getReducedCourse(String id) {
-        // get basic course info [id, name, teacherId] by ID
-        return null;
+    @GetMapping("/{courseId}")
+    public Course getCourse(
+            @AuthenticationPrincipal Jwt token,
+            @PathVariable String courseId,
+            @RequestParam(defaultValue = "false") boolean detailed) {
+        if (detailed)
+            return courseSvc.getCourseInfo(token, courseId);
+        return courseSvc.getBasicCourseInfo(courseId);
     }
 
-    public Object getCourse(String id) {
-        // get course by ID
-        // check the user is the teacher or in the class
-        // get full information about a course
-        return null;
+    @PostMapping("/create")
+    public Course createCourse(
+            @AuthenticationPrincipal Jwt token,
+            @RequestBody CourseCreateRequest req) {
+        req.validate();
+        return courseSvc.createCourse(token, req);
     }
 
-    public Object createCourse(Object data) {
-        // check that the maker is a teacher
-        // validate the data
-        // create the course
-        // add course reference to user
-        // get the newly created course
-        return null;
+    @PostMapping("/archive/{courseId}")
+    public void archiveCourse(
+            @AuthenticationPrincipal Jwt token,
+            @PathVariable String courseId) {
+        courseSvc.archiveCourse(token, courseId);
     }
 
-    public void archiveCourse(String id) {
-        // get course by ID
-        // make sure user's ID is the teacherId
-        // archive course
-    }
-
-    public void updateCourse(Object newCourseInfo) {
-        // get course by ID
-        // make sure user's ID is the teacherId
-        // make sure course is not archived
-        // validate data
-        // update the course
+    @PostMapping("/update")
+    public Course updateCourse(
+            @AuthenticationPrincipal Jwt token,
+            @RequestBody CourseUpdateRequest req) {
+        req.validate();
+        return courseSvc.updateCourse(token, req);
     }
 
 }

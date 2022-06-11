@@ -63,7 +63,7 @@ public abstract class AbstractRootRepository<T> {
         for (String key : fields) {
              value = rawUpdate.get(key);
              if (value == null)
-                throw new IllegalArgumentException("Requested update value is not suppose to be null.");
+                continue;
              update.put(key, value);
         }
 

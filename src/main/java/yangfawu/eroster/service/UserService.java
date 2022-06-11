@@ -1,6 +1,5 @@
 package yangfawu.eroster.service;
 
-import com.google.cloud.firestore.SetOptions;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.UserRecord;
 import com.google.firebase.auth.UserRecord.CreateRequest;
@@ -12,11 +11,15 @@ import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.stereotype.Service;
 import yangfawu.eroster.exception.InputValidationException;
 import yangfawu.eroster.model.User;
+import yangfawu.eroster.model.User.UserBuilder;
 import yangfawu.eroster.payload.request.UserRegisterRequest;
 import yangfawu.eroster.payload.request.UserUpdateRequest;
 import yangfawu.eroster.repository.UserRepository;
 
-import java.util.*;
+import java.util.Arrays;
+import java.util.Map;
+import java.util.NoSuchElementException;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -83,12 +86,12 @@ public class UserService {
         // fetch user ID from token
         final String UID = getUserIdFromFirebaseJwt(token);
         UpdateRequest update = new UpdateRequest(UID);
-        Map<String, Object> dbUpdate = new HashMap<>();
+        UserBuilder updateBuilder = User.builder();
         try {
             if (req.getName() != null) {
                 update.setDisplayName(req.getName());
                 update.setPhotoUrl(ServiceUtil.create(req.getName()));
-                dbUpdate.put("name", req.getName());
+                updateBuilder.name(req.getName());
             }
             // add other changes
         } catch (IllegalArgumentException e) {
@@ -96,10 +99,8 @@ public class UserService {
         }
 
         // apply auth and database updates
-        ServiceUtil.handleFutures(
-                auth.updateUserAsync(update),
-                userRepo.ref(UID).set(dbUpdate, SetOptions.merge())
-        );
+        userRepo.update(UID, updateBuilder.build(), "name");
+        ServiceUtil.handleFuture(auth.updateUserAsync(update));
 
         // return the new User object after the update
         return getUserById(UID);

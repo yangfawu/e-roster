@@ -1,59 +1,66 @@
 package yangfawu.eroster.endpoint;
 
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.web.bind.annotation.*;
+import yangfawu.eroster.model.Connection;
+import yangfawu.eroster.service.ConnectionService;
+
+import java.util.List;
 
 @RestController
+@RequiredArgsConstructor
 @RequestMapping("/api/private/connection")
 public class ConnectionController {
 
-    public void submitInvitation(String courseId) {
-        // get course by ID
-        // make sure user ID == teacherId
-        // make sure course is not already archived
-        // check if the user is already in the course
-        // check if the course already has a request from user -> if yes, add user immediately
-        // create invitation reference in user
+    private final ConnectionService conSvc;
+
+    @PostMapping("/invite/{userId}/to/{courseId}")
+    public void submitInvitation(
+            @AuthenticationPrincipal Jwt token,
+            @PathVariable String userId,
+            @PathVariable String courseId) {
+        conSvc.submitInvitation(token, userId, courseId);
     }
 
-    public void acceptInvitation(String courseId) {
-        // find invitation reference by courseId
-        // get course by ID
-        // check that the course is not already archived
-        // check that the user is not already in the course
-        // add user into course
-        // remove invitation reference
+    @PostMapping("/acceptInvite/{courseId}")
+    public void acceptInvitation(
+            @AuthenticationPrincipal Jwt token,
+            @PathVariable String courseId) {
+        conSvc.acceptInvite(token, courseId);
     }
 
-    public void submitRequest(String courseId) {
-        // get course by ID
-        // make sure the user is a STUDENT
-        // make sure the course is not already archived
-        // check if the user is already in the course
-        // check if the user already has an invitation -> if yes, add user immediately
-        // create request reference in course
+    @PostMapping("/request/{courseId}")
+    public void submitRequest(
+            @AuthenticationPrincipal Jwt token,
+            @PathVariable String courseId) {
+        conSvc.submitRequest(token, courseId);
     }
 
-    public void acceptRequest(String courseId, String userId) {
-        // find request reference in course [courseId] by userId
-        // get course by ID
-        // check user ID == teacherId
-        // check course is not already archived
-        // check student is not already in course
-        // add user to course
-        // delete request
+    @PostMapping("/acceptRequest/{userId}/into/{courseId}")
+    public void acceptRequest(
+            @AuthenticationPrincipal Jwt token,
+            @PathVariable String userId,
+            @PathVariable String courseId) {
+        conSvc.acceptRequest(token, userId, courseId);
     }
 
-    public Object getInvitations(int start, int size) {
-        // read user's invitations to courses based on starting index and page size
-        return null;
+    @GetMapping("/invitations")
+    public List<Connection> getInvitations(
+            @AuthenticationPrincipal Jwt token,
+            @RequestParam(defaultValue = "0") int start,
+            @RequestParam(defaultValue = "10") int size) {
+        return conSvc.getInvitations(token, start, size);
     }
 
-    public Object getRequests(String courseId, int start, int size) {
-        // get course by ID
-        // make sure user is the teacher
-        // fetch all requests based on starting index and page size
-        return null;
+    @GetMapping("/requests/{courseId}")
+    public List<Connection> getRequests(
+            @AuthenticationPrincipal Jwt token,
+            @PathVariable String courseId,
+            @RequestParam(defaultValue = "0") int start,
+            @RequestParam(defaultValue = "10") int size) {
+        return conSvc.getRequests(token, courseId, start, size);
     }
 
 }
